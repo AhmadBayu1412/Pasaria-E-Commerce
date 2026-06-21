@@ -1,0 +1,10 @@
+{
+  "folder-color.pathColors": [],
+  "python-envs.pythonProjects": [
+    {
+      "path": "backend/modules",
+      "envManager": "ms-python.python:venv",
+      "packageManager": "ms-python.python:pip"
+    }
+  ]
+}
