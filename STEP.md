@@ -162,3 +162,55 @@
    console.log(`⚡️ [server]: Server Pasaria berjalan di http://localhost:${port}`);
    });
    ```
+
+# B. Phase 0.5
+
+- siapa objeknya ?
+- siapa boleh melakukan apa ?
+- data apa yang disimpan ?
+- urutan kejadian ?
+- dan apa batasannya?
+
+Buat folder:
+
+docs/
+├── domains.md
+├── api_contract.md
+├── db_model.md
+├── events.md
+└── non_functional.md
+
+1. domain.md
+   Tujuan: menentukan objek bisnis dan relasi
+
+   User
+   ↓
+   Cart
+   ↓
+   Order
+   ↓
+   Payment
+
+   Product
+   ↓
+   Inventory
+
+2. events.md
+   Tujuan: mendefinisikan apa yang ada di sistem.
+
+   contoh:
+   | Event | Producer | Consumer |
+   | ---------------- | -------- | --------- |
+   | OrderPlaced | Order | Inventory |
+   | PaymentCompleted | Payment | Order |
+
+3. db_model.md
+   Tujuan: translate domain -> domain
+   Jangan langsung prisma, tapi mulai lah dari ERD tekstual. dan jangan buat tabel review dulu kalo belum dipakai
+   | Event | Producer | Consumer |
+   | ---------------- | -------- | --------- |
+   | OrderPlaced | Order | Inventory |
+   | PaymentCompleted | Payment | Order |
+
+4. api_contract.md
+   Tujuan: bentuk komunikasi frontend <-> backend
