@@ -1,5 +1,20 @@
 {
-  "folder-color.pathColors": [],
+  "folder-color.pathColors": [
+    {
+      "folderPath": "pasaria-ecommerce\\README.md\\",
+      "isFolderOnly": true,
+      "color": "foldercolorizer.color_000080"
+    },
+    {
+      "folderPath": "pasaria-ecommerce\\backend\\",
+      "isFolderOnly": true,
+      "color": "foldercolorizer.color_ffffff"
+    },
+    {
+      "filePath": "pasaria-ecommerce\\README.md",
+      "color": "foldercolorizer.color_ffffff"
+    }
+  ],
   "python-envs.pythonProjects": [
     {
       "path": "backend/modules",
