@@ -5,6 +5,23 @@ ClaudeAi(cline) - plan or act
 ChatGPT - koreksi plan/code and pertanyaan
 GeminiAi - eksplore ide
 
+Proses Production
+
+1. Jabarkan Phase dengan step tertentu -> ChatGPT
+2. Jelaskan makna dan kenapa hal tersebut harus dilakukan -> GeminiAi
+3. Penjabaran kode lengkapnya -> Claude
+4. Koreksi kode dan analisis phase dengan stepnya -> ChatGPT
+5. Penjabaran kode lengkap (revisi) -> Claude
+6. Implementasi kode
+7. Revisi manual
+8. Revisi otomatis -> Claude
+
+JABARKAN SAJA, JANGAN MENGEDITNYA. Dengan mempertimbangkan kode yg sudah saya buat di project ini, tolong OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan teknologi yg saya pake, dan tetap mempertahankan kinerja aplikasi agar tidak rusak.
+
+sebelum saya implementasikan, tolong analisis ini, hasil analisis ai terhadap arsitektur yg barusan kamu berikan. saya hanya akan kembali ke kamu sekali ini lagi untuk final implementasi kode/asitektur nya, yg selanjutnya saya akan mengirimkan hasil kode berjalannya:
+
+JABARKAN SAJA secara komperhensif. Dengan kode yg kamu sarankan dan koreksian dibawah ini, tolong pertimbangkan apa yang disarankan dengan disesuaikan dengan kondisi project saya.
+
 ---
 
 ## 🏗️ Tech Stack Final

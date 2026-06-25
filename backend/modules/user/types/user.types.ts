@@ -1,6 +1,7 @@
-// UserRole enum (mirror dari Prisma)
-import type { UserRole } from "@prisma/client"
+//! Domain type tidak import dari Prisma. DTO tidak boleh kenal ORM
+// import type { UserRole } from "@prisma/client"
 
+export type UserRole = "ADMIN" | "CUSTOMER"
 // DTO - apa yang boleh keluar dari api
 export interface UserDTO {
     id: number
@@ -10,8 +11,8 @@ export interface UserDTO {
     createdAt: Date
 }
 
-// Input untuk create (passwordHash dari auth, bukan plain password)
+// Input untuk create user. Menerima plain password, BUKAN passwordHash
 export interface CreateUserInput {
     email: string
-    passwordHash: string
-}
+    password: string
+} 
