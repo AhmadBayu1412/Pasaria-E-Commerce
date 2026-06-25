@@ -4,12 +4,12 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Product {
@@ -22,6 +22,10 @@ model Product {
   updatedAt   DateTime  @updatedAt
 }
 
+// ============================================================
+// Audit MODULE (Phase 1)
+// ============================================================
+
 model Audit {
   id         Int         @id @default(autoincrement())
   action     String      // CREATE_PRODUCT, UPDATE_PRODUCT, DELETE_PRODUCT
@@ -30,4 +34,22 @@ model Audit {
   data       String      // JSON stringified
   requestId  String?     
   createdAt  DateTime    @default(now())
+}
+
+// ============================================================
+// User MODULE (Phase 2 Step 1)
+// ============================================================
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

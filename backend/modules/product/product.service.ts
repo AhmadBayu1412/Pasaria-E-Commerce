@@ -1,7 +1,7 @@
 // @file: modules/product/product.service.ts
 
-import type {Prisma} from "../../generated/prisma/client.js"
-import {prisma} from "../../infra/db/prisma"
+import type { Prisma } from "@prisma/client"
+import { prisma } from "../../infra/db/prisma"
 import {getCache, setCache} from "../../infra/cache/redis.service"  // ← Hapus deleteCache
 import { CacheKey } from "../../infra/cache/cache.helper"
 import { CreateProductInput, UpdateProductInput } from "./types/product.types.js"
