@@ -3,10 +3,11 @@ import { UserRules } from "./user.rules.js"
 import type { CreateUserInput, UserDTO } from "./types/user.types.js"
 import { hashPassword } from "../../shared/security/password.js"
 import { toUserDTO } from "./user.mapper.js"
+import { BusinessError } from "../../shared/errors/business.error.js"
 
 /**
  * Create user
- * 
+ *
  * Flow:
  * 1. Validate password policy
  * 2. Check unique email (di service, BUKAN di rules)
@@ -26,7 +27,7 @@ export async function createUser(data: CreateUserInput): Promise<UserDTO> {
     })
 
     if (existing) {
-        throw new Error("Email already registered")
+        throw new BusinessError("Email sudah digunakan", 409)
     }
 
     // 3. Hash password

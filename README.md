@@ -11,16 +11,20 @@ Proses Production
 2. Jelaskan makna dan kenapa hal tersebut harus dilakukan -> GeminiAi
 3. Penjabaran kode lengkapnya -> Claude
 4. Koreksi kode dan analisis phase dengan stepnya -> ChatGPT
-5. Penjabaran kode lengkap (revisi) -> Claude
-6. Implementasi kode
-7. Revisi manual
-8. Revisi otomatis -> Claude
+5. Catet dokumentasi stepnya
+6. Penjabaran kode lengkap (revisi) -> Claude
+7. Implementasi kode
+8. Revisi manual
+9. Revisi otomatis -> Claude
+10. Catet dokumentasi sisanya
 
 JABARKAN SAJA, JANGAN MENGEDITNYA. Dengan mempertimbangkan kode yg sudah saya buat di project ini, tolong OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan teknologi yg saya pake, dan tetap mempertahankan kinerja aplikasi agar tidak rusak.
 
 sebelum saya implementasikan, tolong analisis ini, hasil analisis ai terhadap arsitektur yg barusan kamu berikan. saya hanya akan kembali ke kamu sekali ini lagi untuk final implementasi kode/asitektur nya, yg selanjutnya saya akan mengirimkan hasil kode berjalannya:
 
-JABARKAN SAJA secara komperhensif. Dengan kode yg kamu sarankan dan koreksian dibawah ini, tolong pertimbangkan apa yang disarankan dengan disesuaikan dengan kondisi project saya.
+JABARKAN SAJA secara komperhensif. Dengan kode yg kamu sarankan dan koreksian dibawah ini, tolong pertimbangkan apa yang disarankan disesuaikan dengan kondisi project saya.
+
+Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali berdasarkan saran dibawah ini. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya.
 
 ---
 

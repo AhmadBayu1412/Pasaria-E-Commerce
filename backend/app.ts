@@ -10,10 +10,13 @@ import { checkRedisHealth } from './infra/cache/health';
 import { redis } from './infra/cache/redis';
 import { checkDatabaseHealth } from './infra/db/health';
 
-// SETP 6
+// PHASE 1 STEP 6
 import { errorMiddleware } from './shared/middleware/error.middleware';
 import { notFound } from './shared/middleware/not-found.middleware';
 import { requestIdMiddleware } from './shared/middleware/request-id.middleware';
+
+// PHASE 2 STEP 3
+import authRoutes from "./modules/auth/index.js"
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
@@ -74,6 +77,9 @@ process.on("SIGINT",
         process.exit(0)
     }
 )
+
+// Tambah authRoutes
+app.use("/auth", authRoutes)
 
 // Middleware order: notFound dulu, baru errorMiddleware
 app.use(notFound)

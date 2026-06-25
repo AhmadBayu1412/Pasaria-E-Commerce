@@ -1,23 +1,49 @@
 import { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { BusinessError } from "../errors/business.error.js";
 
 export function errorMiddleware(
-    err:any,
-    req:Request,
-    res:Response,
-    next:NextFunction
+    err: any,
+    req: Request,
+    res: Response,
+    next: NextFunction
 ) {
-    // console.error(err) // Uncomment jika ingin debugging
     if (res.headersSent) {
         return next(err)
     }
-    
-    // STEP 8 cek err.statusCode (dari Business Error) atau err.status (dari library lain)
+
+    // Zod validation error
+    if (err instanceof ZodError) {
+        return res.status(400).json({
+            error: {
+                code: "VALIDATION_ERROR",
+                message: "Input tidak valid",
+                details: err.flatten()
+            }
+        })
+    }
+
+    // Business error (custom validation, conflicts, etc.)
+    if (err instanceof BusinessError) {
+        return res.status(err.statusCode).json({
+            error: {
+                code: err.name === "BusinessError" ? "BUSINESS_ERROR" : err.name,
+                message: err.message
+            }
+        })
+    }
+
+    // Generic error
     const statusCode = err.statusCode || err.status || 500
 
     return res
         .status(statusCode)
         .json({
-            success:false, 
-            message:err.message || "Internal Error"
+            error: {
+                code: "INTERNAL_ERROR",
+                message: process.env.NODE_ENV === "production"
+                    ? "Terjadi kesalahan internal"
+                    : err.message || "Internal Error"
+            }
         })
 }
