@@ -2,6 +2,8 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import express from "express";
+import cookieParser from "cookie-parser"
+
 import productRoutes from "./modules/product/product.routes"
 import { prisma } from "./infra/db/prisma";
 import { checkRedisHealth } from './infra/cache/health';
@@ -10,23 +12,23 @@ import { checkRedisHealth } from './infra/cache/health';
 import { redis } from './infra/cache/redis';
 import { checkDatabaseHealth } from './infra/db/health';
 
-// PHASE 1 STEP 6
+// PHASE 1
 import { errorMiddleware } from './shared/middleware/error.middleware';
 import { notFound } from './shared/middleware/not-found.middleware';
 import { requestIdMiddleware } from './shared/middleware/request-id.middleware';
 
-// PHASE 2 STEP 3
+// PHASE 2 
 import authRoutes from "./modules/auth/index.js"
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
 
+// ============ MIDDLEWARE ============
 app.use(express.json())
+app.use(cookieParser()) // wajib untuk cookie
+app.use(requestIdMiddleware) // STEP 9: Request ID middleware
 
-// STEP 9: Request ID middleware
-app.use(requestIdMiddleware)
-
-//! HEALTH
+//! ============ HEALTH CHECKS ============
 app.get('/health', async (_, res) => {
     const db = await checkDatabaseHealth()
     const cache = await checkRedisHealth()
@@ -51,7 +53,7 @@ app.get('/health', async (_, res) => {
         database: db.database,
         redis: cache.redis,
         service: "Pasaria Api",
-        message: 'Pasaria E-Commerce API is running on Modular Monolith architecture'
+        // message: 'Pasaria E-Commerce API is running on Modular Monolith architecture'
     })
 })
 
@@ -67,8 +69,15 @@ app.get('/health/db', async (_, res) => {
         .json(result)
 })
 
+// ============ ROUTES ============
 app.use("/products", productRoutes)
+app.use("/auth", authRoutes) // Tambah authRoutes
 
+// ============ ERROR HANDLING ============
+app.use(notFound)
+app.use(errorMiddleware)
+
+// ============ GRACEFUL SHUTDOWN ============
 process.on("SIGINT",
     async () => {
         console.log("\nShutting down...")
@@ -78,14 +87,8 @@ process.on("SIGINT",
     }
 )
 
-// Tambah authRoutes
-app.use("/auth", authRoutes)
 
-// Middleware order: notFound dulu, baru errorMiddleware
-app.use(notFound)
-app.use(errorMiddleware)
-
-// BOOTSTRAP
+// ============ BOOTSTRAP ============
 async function bootstrap() {
     try {
         await prisma.$connect()
@@ -95,7 +98,7 @@ async function bootstrap() {
         console.log("✅ REDIS CONNECTED")
         
         app.listen(port, () => {
-            console.log(`⚡️[server]: Server Pasaria berjalan di http://localhost:${port}/health`)
+            console.log(`⚡️[server]: Server Pasaria berjalan di http://localhost:${port}`)
         })
         
     } catch (err) {

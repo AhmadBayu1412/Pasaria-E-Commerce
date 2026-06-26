@@ -42,7 +42,7 @@ export async function createUser(data: CreateUserInput): Promise<UserDTO> {
     return toUserDTO(created)
 }
 
-//! ============ FIND USER (TAMBAHAN) ============
+//! ============ FIND USER ============
 /**
  * Find user by email
  * Return raw user (with passwordHash) for authentication
@@ -51,5 +51,16 @@ export async function createUser(data: CreateUserInput): Promise<UserDTO> {
 export async function findByEmail(email: string) {
     return prisma.user.findUnique({
         where: { email }
+    })
+}
+
+/**
+ * Find user by Id
+ * Return raw user for session validation
+ * HANYA boleh dipakai oleh auth service/middleware
+ */
+export async function findById(id: number) {
+    return prisma.user.findUnique({
+        where: { id }
     })
 }

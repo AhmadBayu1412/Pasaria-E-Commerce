@@ -23,4 +23,4 @@ export const loginSchema = z.object({
         .min(1, { message: "Password wajib diisi" })
 })
 
-export type LoginInput = z.infer<typeof loginSchema>
+export type LoginInput = z.infer<typeof loginSchema> 

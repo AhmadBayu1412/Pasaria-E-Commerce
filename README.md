@@ -20,10 +20,10 @@ Proses Production
 
 Tolong jelaskan mengenai step ini (..) secara komperhensif. (ChatGPT)
 
-Dari penjelasan step ini tolong tulis ulang dan tambahkan jika ada koreksi/saran yg diperlukan.
+Dari penjelasan step ini tolong tulis ulang dan tambahkan jika ada koreksi/saran yg diperlukan. penjelasan kamu akan jadi roadmap step ini:
 (ChatGPT: percakapan baru)
 
-Tolong jelaskan step dibawah ini secara komperhensif namun dengan bahasa yg mudah dimengerti
+Saya sudah menyelesaikan tahap sebelumnya. Sekarang, tolong jelaskan step dibawah ini secara komperhensif namun dengan bahasa yg mudah dimengerti
 (GeminiAi)
 
 JABARKAN SAJA, JANGAN MENGEDITNYA. Dengan mempertimbangkan kode yg sudah saya buat di project ini, tolong OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan teknologi yg saya pake, dan tetap mempertahankan kinerja aplikasi agar tidak rusak.
@@ -35,13 +35,16 @@ sebelum saya implementasikan, tolong analisis ini, hasil analisis ai terhadap ar
 JABARKAN SAJA secara komperhensif. Dengan kode yg kamu sarankan dan koreksian dibawah ini, tolong pertimbangkan apa yang disarankan disesuaikan dengan kondisi project saya.
 (ClaudeAi)
 
+Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya. Tolong sertakan dipaling bawah berupa yg bisa saya tes secara manual.
+(ClaudeAi)
+
 ini adalah hasil tes implementasi step diatas, tolong analisa dan apakah sudah sesuai, serta siap untuk step berikutnya:
 (ChatGPT)
 
 Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya.
 (ClaudeAi)
 
-sudah diperbaiki seperti dibawah ini. sekarang tolong jelaskan secara komperhensif step berikutnya:
+sudah diperbaiki. sekarang tolong berikan commit git, serta jelaskan secara komperhensif step berikutnya:
 (ChatGPT)
 
 ---
