@@ -5,18 +5,15 @@ import { hashPassword } from "../../shared/security/password.js"
 import { toUserDTO } from "./user.mapper.js"
 import { BusinessError } from "../../shared/errors/business.error.js"
 
+
+//! ============ CREATE USER ============
 /**
- * Create user
- *
- * Flow:
  * 1. Validate password policy
  * 2. Check unique email (di service, BUKAN di rules)
  * 3. Hash password
  * 4. Save to DB
  * 5. Return DTO (bukan raw Prisma)
  */
-
-// Create user
 export async function createUser(data: CreateUserInput): Promise<UserDTO> {
     // 1. Validate password policy (pure function)
     UserRules.validatePassword(data.password)
@@ -45,16 +42,14 @@ export async function createUser(data: CreateUserInput): Promise<UserDTO> {
     return toUserDTO(created)
 }
 
-// Cari user berdasarkan email
-// export async function findUserByEmail(email: string) {
-//     return prisma.user.findUnique({
-//         where: { email }
-//     })
-// } 
-
-// Cari user berdasarkan id
-// export async function findUserById(id: number) {
-//     return prisma.user.findUnique({
-//         where: { id }
-//     })
-// }
+//! ============ FIND USER (TAMBAHAN) ============
+/**
+ * Find user by email
+ * Return raw user (with passwordHash) for authentication
+ * HANYA boleh dipakai oleh auth service
+*/ 
+export async function findByEmail(email: string) {
+    return prisma.user.findUnique({
+        where: { email }
+    })
+}

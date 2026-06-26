@@ -11,20 +11,38 @@ Proses Production
 2. Jelaskan makna dan kenapa hal tersebut harus dilakukan -> GeminiAi
 3. Penjabaran kode lengkapnya -> Claude
 4. Koreksi kode dan analisis phase dengan stepnya -> ChatGPT
-5. Catet dokumentasi stepnya
-6. Penjabaran kode lengkap (revisi) -> Claude
+5. Penjabaran kode lengkap (revisi) -> Claude
+6. Catet dokumentasi stepnya
 7. Implementasi kode
 8. Revisi manual
-9. Revisi otomatis -> Claude
+9. Revisi otomatis + tambahan -> Claude
 10. Catet dokumentasi sisanya
 
+Tolong jelaskan mengenai step ini (..) secara komperhensif. (ChatGPT)
+
+Dari penjelasan step ini tolong tulis ulang dan tambahkan jika ada koreksi/saran yg diperlukan.
+(ChatGPT: percakapan baru)
+
+Tolong jelaskan step dibawah ini secara komperhensif namun dengan bahasa yg mudah dimengerti
+(GeminiAi)
+
 JABARKAN SAJA, JANGAN MENGEDITNYA. Dengan mempertimbangkan kode yg sudah saya buat di project ini, tolong OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan teknologi yg saya pake, dan tetap mempertahankan kinerja aplikasi agar tidak rusak.
+(ClaudeAi)
 
 sebelum saya implementasikan, tolong analisis ini, hasil analisis ai terhadap arsitektur yg barusan kamu berikan. saya hanya akan kembali ke kamu sekali ini lagi untuk final implementasi kode/asitektur nya, yg selanjutnya saya akan mengirimkan hasil kode berjalannya:
+(ChatGPT)
 
 JABARKAN SAJA secara komperhensif. Dengan kode yg kamu sarankan dan koreksian dibawah ini, tolong pertimbangkan apa yang disarankan disesuaikan dengan kondisi project saya.
+(ClaudeAi)
 
-Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali berdasarkan saran dibawah ini. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya.
+ini adalah hasil tes implementasi step diatas, tolong analisa dan apakah sudah sesuai, serta siap untuk step berikutnya:
+(ChatGPT)
+
+Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya.
+(ClaudeAi)
+
+sudah diperbaiki seperti dibawah ini. sekarang tolong jelaskan secara komperhensif step berikutnya:
+(ChatGPT)
 
 ---
 
