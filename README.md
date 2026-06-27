@@ -18,44 +18,55 @@ Proses Production
 9. Revisi otomatis + tambahan -> Claude
 10. Catet dokumentasi sisanya
 
-Tolong jelaskan mengenai step ini (..) secara komperhensif. (ChatGPT)
+A. PLAN
 
-Dari penjelasan step ini tolong tulis ulang dan tambahkan jika ada koreksi/saran yg diperlukan. penjelasan kamu akan jadi roadmap step ini:
-(ChatGPT: percakapan baru)
+1. Tolong jelaskan mengenai step ini (..) secara komperhensif.
+   (ChatGPT)
 
-Saya sudah menyelesaikan tahap sebelumnya. Sekarang, tolong jelaskan step dibawah ini secara komperhensif namun dengan bahasa yg mudah dimengerti
-(GeminiAi)
+2. JABARKAN SAJA, JANGAN MENGEDITNYA. Dengan mempertimbangkan kode yg sudah saya buat di project ini, tolong OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan teknologi yg saya pake, dan tetap mempertahankan kinerja aplikasi agar tidak rusak.
+   (ClaudeAi)
 
-JABARKAN SAJA, JANGAN MENGEDITNYA. Dengan mempertimbangkan kode yg sudah saya buat di project ini, tolong OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan teknologi yg saya pake, dan tetap mempertahankan kinerja aplikasi agar tidak rusak.
-(ClaudeAi)
+3. Dari penjelasan step ini tolong tulis ulang dan tambahkan jika ada koreksi/saran yg diperlukan. penjelasan kamu akan jadi roadmap step ini:
+   (ChatGPT: percakapan baru)
 
-<!-- sebelum saya implementasikan, tolong analisis ini, hasil analisis ai terhadap arsitektur yg barusan kamu berikan. saya hanya akan kembali ke kamu sekali ini lagi untuk final implementasi kode/asitektur nya, yg selanjutnya saya akan mengirimkan hasil kode berjalannya:
+<!-- 4. sebelum saya implementasikan, tolong analisis ini, hasil analisis ai terhadap arsitektur yg barusan kamu berikan. saya hanya akan kembali ke kamu sekali ini lagi untuk final implementasi kode/asitektur nya, yg selanjutnya saya akan mengirimkan hasil kode berjalannya:
 (ChatGPT) -->
 
-sebelum saya implementasikan, tolong analisis implementasi kode yg akan dijalankan. Ini merupakan hasil analisis terhadap kemungkinan arsitektur yg barusan kamu berikan dibawah. saya hanya akan kembali ke kamu sekali ini lagi untuk hasil testing kode/asitektur nya:
-(ChatGPT)
+4. sebelum saya implementasikan, tolong analisis implementasi kode yg akan dijalankan. Ini merupakan hasil analisis terhadap kemungkinan arsitektur yg barusan kamu berikan dibawah. saya hanya akan kembali ke kamu sekali ini lagi untuk hasil testing kode/asitektur nya:
+   (ChatGPT)
 
-JABARKAN SAJA, JANGAN MENGEDITNYA. Ini adalah koreksian terhadap rancangan implementasi kode kamu. Tolong pertimbangkan dan OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan project secara teknikal dan fundamental, serta dengan tetap mempertahankan kinerja aplikasi agar tidak rusak. (ClaudeAi)
+B. REVISI PLAN
 
-tolong jabarkan ulang keseluruhan STEP 6 ini untuk saya simpan sebagai dokumentasi (ChatGPT)
+1. JABARKAN SAJA, JANGAN MENGEDITNYA. Ini adalah koreksian terhadap rancangan implementasi kode kamu. Tolong pertimbangkan dan OPTIMALKAN saran dibawah ini, berupa KODE yg baik dan tepat, serta dengan memperhatikan project secara teknikal dan fundamental, serta dengan tetap mempertahankan kinerja aplikasi agar tidak rusak. (ClaudeAi)
 
-Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya. Tolong sertakan dipaling bawah berupa yg bisa saya tes secara manual.
-(ClaudeAi)
+2. tolong jabarkan ulang keseluruhan STEP ini untuk saya simpan sebagai dokumentasi
+   (ChatGPT)
 
-Tolong analisis lebih dalam, periksa keterkaitan dan kemungkinan error. saya belum melakukan tes karena merasa mungkin ada yang belum beres.
-(ClaudeAi)
+3. Saya sudah menyelesaikan tahap sebelumnya. Sekarang, tolong jelaskan step dibawah ini secara komperhensif namun dengan bahasa yg mudah dimengerti
+   (GeminiAi)
 
-Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya.
-(ClaudeAi)
+C. IMPLEMENTASI KODE & TESTING
 
-Tolong jalankan semua test kembali, kemudian rangkum script, hasil, dan statusnya
+D. SETELAH IMPLEMENTASI
 
-ini adalah hasil tes implementasi step diatas, tolong analisa dan apakah sudah sesuai, serta siap untuk step berikutnya:
-(ChatGPT)
-(ClaudeAi)
+1. Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya. Tolong sertakan dipaling bawah berupa yg bisa saya tes secara manual.
+   (ClaudeAi)
 
-sudah diperbaiki. sekarang tolong berikan commit git, serta jelaskan secara komperhensif step berikutnya:
-(ChatGPT)
+2. Tolong analisis lebih dalam, periksa keterkaitan dan kemungkinan error. saya belum melakukan tes karena merasa mungkin ada yang belum beres.
+   (ClaudeAi)
+
+3. Ini adalah hasil implementasi code yg telah saya terapkan. Tolong analisis kembali. Sekarang saya serahkan kepada kamu untuk mungkin untuk memperbaiki project ini dan mungkin sedikit tambahan (jika diperlukan), namun jangan sampai merusak project saya.
+   (ClaudeAi)
+
+4. Tolong jalankan semua test kembali, kemudian rangkum script, hasil, dan statusnya
+
+5. ini adalah hasil tes implementasi step diatas, tolong analisa dan apakah sudah sesuai, serta siap untuk step berikutnya:
+   (ChatGPT)
+
+E. PLAN BERIKUTNYA
+
+1. sudah diperbaiki. sekarang tolong berikan commit git, serta jelaskan secara komperhensif step berikutnya:
+   (ChatGPT)
 
 ---
 

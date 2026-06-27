@@ -12,6 +12,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================
+// Product MODEL
+// ============================================================
 model Product {
   id          Int       @id @default(autoincrement())
   name        String
@@ -20,8 +23,14 @@ model Product {
   stock       Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-}
 
+// ============================================================
+// Ownership - Relasi ke user sebagai seller (Phase 2 Step 7)
+// ============================================================
+  sellerId    Int
+  seller      User      @relation(fields: [sellerId], references: [id])
+}
+ 
 // ============================================================
 // Audit MODULE (Phase 1)
 // ============================================================
@@ -37,7 +46,7 @@ model Audit {
 }
 
 // ============================================================
-// User MODULE (Phase 2 Step 1)
+// User MODEL (Phase 2 Step 1)
 // ============================================================
 enum UserRole {
   ADMIN
@@ -53,4 +62,9 @@ model User {
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+// ============================================================
+// Relasi Ownership - satu user bisa punya banyak product (Phase 2 Step 1)
+// ============================================================
+  products      Product[]
 }

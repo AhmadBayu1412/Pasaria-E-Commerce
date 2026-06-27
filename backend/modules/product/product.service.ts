@@ -1,14 +1,19 @@
 // @file: modules/product/product.service.ts
 
 import type { Prisma } from "@prisma/client"
-import { prisma } from "../../infra/db/prisma"
-import {getCache, setCache} from "../../infra/cache/redis.service"  // ← Hapus deleteCache
-import { CacheKey } from "../../infra/cache/cache.helper"
-import { CreateProductInput, UpdateProductInput } from "./types/product.types.js"
+import { prisma } from "../../infra/db/prisma.js"
+import { getCache, setCache } from "../../infra/cache/redis.service.js"
+import { CacheKey } from "../../infra/cache/cache.helper.js"
+import type { CreateProductInput, UpdateProductInput } from "./types/product.types.js"
 import { ProductRules } from "./rules/product.rules.js"
 import { TransactionManager } from "../../shared/transaction/transaction.js"
+import type { AuthenticatedUser } from "../../shared/session/session.types.js"
+import { assertCanUpdateProduct, assertCanDeleteProduct } from "../ownership/index.js"
 
-// READ OPERATIONS (Cache-first, tidak perlu transaction)
+// ============================================================
+// READ OPERATIONS (Cache-first)
+// ============================================================
+
 export async function getProducts() {
     let cached = null
     try {
@@ -72,37 +77,50 @@ export async function getProductById(id: number) {
 // ============================================================
 
 /**
- * CREATE dengan Transaction
- * 
+ * CREATE PRODUCT (dengan Transaction)
+ *
  * Flow:
  * 1. Business rule (di luar tx - baca saja)
  * 2. Transaction:
  *    - Create product
  *    - Create audit log
  * 3. Commit berhasil → cache invalidation otomatis
+ *
+ * STEP 7:
+ * - sellerId diambil dari req.user (bukan dari request body)
+ * - Body request TIDAK boleh menentukan owner
  */
-export async function createProduct(data: CreateProductInput) {
-    // 1. Business rule
+export async function createProduct(
+    data: CreateProductInput,
+    user: AuthenticatedUser
+) {
+    // 1. Business rule check
     await ProductRules.assertUniqueName(data.name)
 
     // 2. Execute dalam transaction
     const product = await TransactionManager.withTransaction(
         async (tx) => {
-            // 2a. Create product
+            // Create product - sellerId = user.id (dari session, BUKAN dari body)
             const newProduct = await tx.product.create({
                 data: {
-                    ...data,
-                    stock: data.stock ?? 0
+                    name: data.name,
+                    description: data.description,
+                    price: data.price,
+                    stock: data.stock ?? 0,
+                    sellerId: user.id
                 }
             })
 
-            // 2b. Create audit log (di dalam tx yang sama)
+            // Create audit log (di dalam tx yang sama)
             await tx.audit.create({
                 data: {
                     action: "CREATE_PRODUCT",
                     entityType: "Product",
                     entityId: newProduct.id,
-                    data: JSON.stringify(newProduct),
+                    data: JSON.stringify({
+                        type: "CREATE",
+                        product: newProduct
+                    }),
                     createdAt: new Date()
                 }
             })
@@ -120,13 +138,42 @@ export async function createProduct(data: CreateProductInput) {
     }
 }
 
+// ============================================================
+// UPDATE Operations (dengan Transaction)
+// ============================================================
+
 /**
- * UPDATE dengan Transaction
+ * UPDATE PRODUCT
+ *
+ * STEP 7:
+ * - Ownership check di luar transaction (efisien)
+ * - Fetch sebelum state untuk audit
+ *
+ * Query plan:
+ * 1. assertCanUpdateProduct - validasi ownership (1 query)
+ * 2. prisma.product.findUnique - ambil sebelum state untuk audit (1 query)
+ * 3. tx.product.update - update (didalam transaction)
+ * Total: 2 query di luar transaction
  */
-export async function updateProduct(id: number, data: UpdateProductInput) {
+export async function updateProduct(
+    id: number,
+    data: UpdateProductInput,
+    user: AuthenticatedUser
+) {
+    // STEP 7: Ownership check - throw error jika tidak punya akses
+    // Ini akan throw BusinessError 403 atau 404
+    await assertCanUpdateProduct(id, user)
+
+    // Business rule
     if (data.name) {
         await ProductRules.assertUniqueNameForUpdate(id, data.name)
     }
+
+    // STEP 7: Ambil kondisi SEBELUM update untuk audit
+    // Ini dilakukan di LUAR transaction karena hanya READ
+    const beforeProduct = await prisma.product.findUnique({
+        where: { id }
+    })
 
     const updated = await TransactionManager.withTransaction(
         async (tx) => {
@@ -136,13 +183,17 @@ export async function updateProduct(id: number, data: UpdateProductInput) {
                 data: data as Prisma.ProductUpdateInput
             })
 
-            // Create audit log
+            // Audit log dengan BEFORE dan AFTER yang BENAR
             await tx.audit.create({
                 data: {
                     action: "UPDATE_PRODUCT",
                     entityType: "Product",
                     entityId: id,
-                    data: JSON.stringify({ before: data, after: updatedProduct }),
+                    data: JSON.stringify({
+                        type: "UPDATE",
+                        before: beforeProduct,
+                        after: updatedProduct
+                    }),
                     createdAt: new Date()
                 }
             })
@@ -159,26 +210,52 @@ export async function updateProduct(id: number, data: UpdateProductInput) {
     }
 }
 
+// ============================================================
+// DELETE Operations (dengan Transaction)
+// ============================================================
+
 /**
- * DELETE dengan Transaction
+ * DELETE PRODUCT
+ *
+ * STEP 7:
+ * - Ownership check di luar transaction (efisien)
+ *
+ * Query plan:
+ * 1. assertCanDeleteProduct - validasi ownership + fetch untuk audit (1 query)
+ * 2. tx.product.delete - delete (didalam transaction)
+ * Total: 1 query di luar transaction (LEBIH EFISIEN)
  */
-export async function deleteProduct(id: number) {
+export async function deleteProduct(
+    id: number,
+    user: AuthenticatedUser
+) {
+    // STEP 7: Ownership check - throw error jika tidak punya akses
+    // Untuk SELLER: fetch product untuk audit
+    // Untuk ADMIN: bypass, tidak perlu fetch karena admin boleh delete apapun
+    const existingProduct = await assertCanDeleteProduct(id, user)
+
     const deleted = await TransactionManager.withTransaction(
         async (tx) => {
-            // Get product before delete for audit
-            const product = await tx.product.findUnique({ where: { id } })
-            
+            // Ambil product dalam tx jika belum di-fetch (untuk admin)
+            // Jika SELLER, existingProduct sudah ada dari assertCanDeleteProduct
+            const productForAudit = existingProduct
+                ? existingProduct
+                : await tx.product.findUnique({ where: { id } })
+
             // Delete product
             const result = await tx.product.delete({ where: { id } })
 
             // Create audit log
-            if (product) {
+            if (productForAudit) {
                 await tx.audit.create({
                     data: {
                         action: "DELETE_PRODUCT",
                         entityType: "Product",
                         entityId: id,
-                        data: JSON.stringify(product),
+                        data: JSON.stringify({
+                            type: "DELETE",
+                            product: productForAudit
+                        }),
                         createdAt: new Date()
                     }
                 })
@@ -189,6 +266,5 @@ export async function deleteProduct(id: number) {
         [CacheKey.productsList, CacheKey.productDetail(id)]
     )
 
-    // ← HAPUS: deleteCache() di luar
     return deleted
 }

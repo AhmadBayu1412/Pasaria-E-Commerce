@@ -17,7 +17,9 @@ router.get("/:id", getProductByIdController)
  * POST /products
  * Create new product
  * Accessible oleh: ADMIN, SELLER
- */
+ * 
+ * STEP 7: Produk di assign ke user yang membuat
+ */ 
 router.post(
     "/", 
     authenticate,
@@ -30,7 +32,9 @@ router.post(
  * Update product
  * Accessible oleh: ADMIN, SELLER
  * 
- * Note: Ownership check (seller hanya produ miliknya) -> Step 7
+ * STEP 7: Ownership check di service layer
+ * - ADMIN: boleh update semua
+ * - SELLER: hanya produk miliknya
  * */
 
 router.put(
@@ -43,12 +47,16 @@ router.put(
 /**
  * DELETE /products/:id
  * Delete product
- * Accessible oleh: ADMIN only
+ * Accessible oleh: ADMIN, SELLER
+ * 
+ * STEP 7: Ownership check di service layer
+ * - ADMIN: boleh delete semua
+ * - SELLER: hanya produk miliknya
  */
 router.delete(
     "/:id", 
     authenticate,
-    authorize("ADMIN"),
+    authorize("ADMIN", "SELLER"),
     deleteProductController)
 
 export default router

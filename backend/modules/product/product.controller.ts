@@ -1,6 +1,7 @@
 import { Request, Response,NextFunction } from "express";
 import { getProducts, createProduct, getProductById, updateProduct, deleteProduct } from "./product.service";
 
+// GET /products - semua orang bisa melihat
 export async function getProductsController(
     req: Request,
     res: Response,
@@ -14,24 +15,10 @@ export async function getProductsController(
         })
     } catch (err) {
         next(err)
-    }
+    } 
 }
 
-export async function createProductController(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
-    try {
-        const product = await createProduct(req.body)
-        return res.status(201).json({
-            success: true,
-            data: product
-        })
-    } catch (err) {
-        next(err)
-    }
-}
+// GET /products/:id - Semua orang bisa melihat
 
 export async function getProductByIdController(
     req: Request,
@@ -51,6 +38,35 @@ export async function getProductByIdController(
         next(err)
     }
 }
+
+// POST /products - Buat produk baru
+/**
+ * STEP 7 sellerId diambil dari req.user.id
+ * User harus role ADMIN atau SELLER (sudah dicek authorize middleware)
+ */
+export async function createProductController(
+    req: Request,
+    res: Response,
+    next: NextFunction
+) {
+    try {
+        const user = req.user! // Sudah di set oleh authenticate middleware
+        const product = await createProduct(req.body, user)
+        return res.status(201).json({
+            success: true,
+            data: product
+        })
+    } catch (err) {
+        next(err)
+    }
+}
+
+// PUT /products/:id - Update produk 
+/**
+ * STEP 7: Ownership check
+ * - ADMIN: boleh update semua produk
+ * - SELLER:l hanya boleh update produk miliknya
+ */
 export async function updateProductController(
     req: Request,
     res: Response,
@@ -63,7 +79,8 @@ export async function updateProductController(
             return res.status(400).json({ success: false, message: "Invalid ID" })
         }
 
-        const data = await updateProduct(id, req.body)
+        const user = req.user! // Sudah di set oleh authenticate middleware
+        const data = await updateProduct(id, req.body, user)
 
         return res.json({
             success: true,
@@ -73,6 +90,13 @@ export async function updateProductController(
         next(err)
     }
 }
+
+// DELETE /products/:id - Hapus produk 
+/**
+ * STEP 7: Ownership check
+ * - ADMIN: boleh delete semua produk
+ * - SELLER:l hanya boleh delete produk miliknya sendiri
+ */
 export async function deleteProductController(
     req: Request,
     res: Response,
@@ -85,7 +109,8 @@ export async function deleteProductController(
             return res.status(400).json({ success: false, message: "Invalid ID" })
         }
 
-        const data = await deleteProduct(id)
+        const user = req.user! // Sudah di set oleh authenticate middleware
+        const data = await deleteProduct(id, user)
 
         return res.json({ success: true, data })
     } catch (err) {

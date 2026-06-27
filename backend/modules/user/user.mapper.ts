@@ -8,6 +8,7 @@ export function toUserDTO(user: User): UserDTO {
         email: user.email,
         role: user.role as UserRole,
         isActive: user.isActive,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
     }
 } 

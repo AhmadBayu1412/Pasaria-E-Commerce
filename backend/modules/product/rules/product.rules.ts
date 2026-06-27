@@ -22,5 +22,5 @@ export const ProductRules = {
         if(existingProduct && existingProduct.id !== id) {
             throw new BusinessError("Product name already taken by another product", 409)
         }
-    }
+    } 
 }
