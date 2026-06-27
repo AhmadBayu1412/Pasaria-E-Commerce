@@ -1,7 +1,7 @@
 //! Domain type tidak import dari Prisma. DTO tidak boleh kenal ORM
 // import type { UserRole } from "@prisma/client"
 
-export type UserRole = "ADMIN" | "CUSTOMER"
+export type UserRole = "ADMIN" | "SELLER" | "CUSTOMER"
 // DTO - apa yang boleh keluar dari api
 export interface UserDTO {
     id: number

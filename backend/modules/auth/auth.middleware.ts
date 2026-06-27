@@ -1,10 +1,9 @@
-import { Request, Response, NextFunction } from "express";
-import type { AuthenticatedUser } from "../../shared/session/session.types.js";
-import { SESSION_CONFIG } from "../../shared/session/session.config.js";
-import { BusinessError } from "../../shared/errors/business.error.js";
-import { findById } from "../user/user.service.js";
-import { sessionService } from "./session.service.js";
-
+import { Request, Response, NextFunction } from "express"
+import type { AuthenticatedUser } from "../../shared/session/session.types.js"
+import { SESSION_CONFIG } from "../../shared/session/session.config.js"
+import { BusinessError } from "../../shared/errors/business.error.js"
+import { findById } from "../user/user.service.js"
+import { sessionService } from "./session.service.js"
 
 //! Extend Express request
 declare global {
@@ -17,13 +16,13 @@ declare global {
 
 /**
  * Authentication Middleware
- *
+ * 
  * Flow:
  * 1. Baca sessionId dari cookie
  * 2. Cari session di storage
  * 3. Validasi user masih aktif di database
  * 4. Attach AuthenticatedUser ke request
- *
+ * 
  * Session validation:
  * - Session harus ada di redis
  * - User harus masih aktif di database
@@ -49,8 +48,7 @@ export async function authenticate(
             throw new BusinessError("Session expired. Silakan login kembali.", 401)
         }
 
-        //! 3. Validasi user masih aktif di database.
-        // findById lebih tepat karena kita sudah punya userId
+        //! 3. Validasi user masih aktif di database
         const dbUser = await findById(session.userId)
 
         if (!dbUser) {
@@ -60,16 +58,16 @@ export async function authenticate(
         }
 
         if (!dbUser.isActive) {
-            //! User disabled
+            //! User disabled - return 401 karena user tidak bisa melakukan operasi apapun
             await sessionService.delete(sessionId)
-            throw new BusinessError("Akun non-aktif. Hubungi support.", 403)
+            throw new BusinessError("Akun non-aktif. Hubungi support.", 401)
         }
 
         //! 4. Attach user ke request
         req.user = {
             id: session.userId,
             role: session.role,
-            sessionId: sessionId //! untuk logout/audit tanpa baca cookie lagi
+            sessionId: sessionId
         }
 
         next()

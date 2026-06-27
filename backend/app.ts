@@ -19,6 +19,7 @@ import { requestIdMiddleware } from './shared/middleware/request-id.middleware';
 
 // PHASE 2 
 import authRoutes from "./modules/auth/index.js"
+import userRoutes from "./modules/user/user.routes.js"
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
@@ -72,6 +73,7 @@ app.get('/health/db', async (_, res) => {
 // ============ ROUTES ============
 app.use("/products", productRoutes)
 app.use("/auth", authRoutes) // Tambah authRoutes
+app.use("/users", userRoutes)
 
 // ============ ERROR HANDLING ============
 app.use(notFound)
