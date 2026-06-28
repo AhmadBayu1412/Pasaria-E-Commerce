@@ -1,19 +1,6 @@
-import type { UserRole } from "../../modules/user/types/user.types.js";
-
 /**
- * SessionData - data yang disimpan di redis
+ * Session types
+ * NOTE: Import AuthenticatedUser dan SessionData dari shared/auth/types/auth.types.js
+ * untuk konsistensi terpusat
  */
-export interface SessionData {
-    userId: number
-    role: UserRole
-} 
- 
-/**
- * AuthenticatedUser - Context yang di attach ke request
- * Dipakai di controller untuk akses user info
- */
-export interface AuthenticatedUser {
-    id: number
-    role: UserRole
-    sessionId: string // Untuk logout, audit, rotate - tanpa baca cookie lagi
-}
+export type { SessionData, AuthenticatedUser } from "../auth/types/auth.types.js"

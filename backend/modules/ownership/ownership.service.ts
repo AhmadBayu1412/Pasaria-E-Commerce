@@ -1,6 +1,6 @@
 import { prisma } from "../../infra/db/prisma.js"
 import { BusinessError } from "../../shared/errors/business.error.js"
-import type { AuthenticatedUser } from "../../shared/session/session.types.js"
+import type { AuthenticatedUser } from "../../shared/auth/types/auth.types.js"
 
 /**
  * STEP 7: Ownership Service
@@ -48,7 +48,8 @@ export async function assertCanUpdateProduct(
     // SELLER harus memiliki produk ini
     if (product.sellerId !== user.id) {
         throw new BusinessError(
-            "Anda tidak memiliki akses untuk mengubah produk ini", 403
+            "Anda tidak memiliki akses untuk mengubah produk ini",
+            403
         )
     }
 
@@ -91,7 +92,8 @@ export async function assertCanDeleteProduct(
     // SELLER harus miliki produk ini
     if (product.sellerId !== user.id) {
         throw new BusinessError(
-            "Anda tidak memiliki akses untuk menghapus produk ini", 403
+            "Anda tidak memiliki akses untuk menghapus produk ini",
+            403
         )
     }
 

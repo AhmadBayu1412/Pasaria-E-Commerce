@@ -44,18 +44,20 @@ async function httpRequest(
 ): Promise<{ status: number; data: any }> {
     return new Promise((resolve) => {
         const url = new URL(path, BASE_URL)
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        }
+
+        if (cookie) {
+            headers['Cookie'] = cookie
+        }
+
         const options: http.RequestOptions = {
             hostname: url.hostname,
             port: url.port,
             path: url.pathname + url.search,
             method: method,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }
-
-        if (cookie) {
-            options.headers!['Cookie'] = cookie
+            headers: headers
         }
 
         const req = http.request(options, (res) => {
