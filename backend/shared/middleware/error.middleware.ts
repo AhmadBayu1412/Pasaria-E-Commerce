@@ -27,7 +27,7 @@ export function errorMiddleware(
     if (err instanceof BusinessError) {
         return res.status(err.statusCode).json({
             error: {
-                code: err.name === "BusinessError" ? "BUSINESS_ERROR" : err.name,
+                code: err.code || "BUSINESS_ERROR",
                 message: err.message
             }
         })

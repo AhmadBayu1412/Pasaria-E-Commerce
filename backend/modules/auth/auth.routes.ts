@@ -1,17 +1,18 @@
-import { Router } from "express";
-import { login, logout, register } from "./auth.controller.js";
-import { authenticate } from "./auth.middleware.js";
+import { Router } from "express"
+import { login, logout, register } from "./auth.controller.js"
+import { authenticate } from "./auth.middleware.js"
+import { rateLimit } from "../../shared/security/rate-limit.js"
+import { validateCsrf } from "../../shared/security/csrf.js"
 
 const router = Router()
 
 // ============ PUBLIC ROUTES ============
-router.post("/register", register)
-router.post("/login", login)
+// Rate limiter dipasang per endpoint
+router.post("/register", rateLimit("register"), register)
+router.post("/login", rateLimit("login"), login)
 
 // ============ PROTECTED ROUTES ============
-// Semua route di bawah butuh authentication
-router.post("/logout", authenticate, logout)
+// CSRF validation untuk endpoint yang memodifikasi data
+router.post("/logout", authenticate, validateCsrf, logout)
 
-// Note: /me endpoint TIDAK dibuat di step 5
-// Nanti akan dibuat di user module (step 6+)
-export default router 
+export default router

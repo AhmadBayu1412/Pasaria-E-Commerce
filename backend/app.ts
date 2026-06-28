@@ -1,60 +1,74 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
-import express from "express";
+import express from "express"
 import cookieParser from "cookie-parser"
 
-import productRoutes from "./modules/product/product.routes"
-import { prisma } from "./infra/db/prisma";
-import { checkRedisHealth } from './infra/cache/health';
-
-// Redis: Aktifkan setelah redis.ts dibuat
-import { redis } from './infra/cache/redis';
-import { checkDatabaseHealth } from './infra/db/health';
+import { prisma } from "./infra/db/prisma"
+import { redis } from "./infra/cache/redis"
+import { checkDatabaseHealth } from './infra/db/health'
+import { checkRedisHealth } from './infra/cache/health'
 
 // PHASE 1
-import { errorMiddleware } from './shared/middleware/error.middleware';
-import { notFound } from './shared/middleware/not-found.middleware';
-import { requestIdMiddleware } from './shared/middleware/request-id.middleware';
+import { errorMiddleware } from './shared/middleware/error.middleware'
+import { notFound } from './shared/middleware/not-found.middleware'
+import { requestIdMiddleware } from './shared/middleware/request-id.middleware'
 
-// PHASE 2 
+// PHASE 2 - Auth
 import authRoutes from "./modules/auth/index.js"
 import userRoutes from "./modules/user/user.routes.js"
+
+// PHASE 2 - Step 9: Security Hardening
+import { helmetMiddleware } from "./shared/security/helmet.config.js"
+import { assertEnvironment } from "./infra/config/env.validation.js"
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
 
-// ============ MIDDLEWARE ============
-app.use(express.json())
-app.use(cookieParser()) // wajib untuk cookie
-app.use(requestIdMiddleware) // STEP 9: Request ID middleware
+// ============ TRUST PROXY ============
+// Untuk rate limiting yang akurat di belakang reverse proxy
+// Nilai sesuai jumlah proxy di depan aplikasi
+app.set("trust proxy", Number(process.env.TRUST_PROXY_COUNT) || 1)
 
-//! ============ HEALTH CHECKS ============
+// ============ MIDDLEWARE ============
+
+// 1. Security headers (Helmet) - FIRST
+app.use(helmetMiddleware())
+
+// 2. Cookie parser (untuk CSRF + session)
+app.use(cookieParser())
+
+// 3. Body parsers
+app.use(express.json())
+
+// 4. Request ID
+app.use(requestIdMiddleware)
+
+// ============ HEALTH CHECKS ============
 app.get('/health', async (_, res) => {
     const db = await checkDatabaseHealth()
     const cache = await checkRedisHealth()
 
-    const healthy = 
+    const healthy =
         db.database === "UP"
         &&
         cache.redis === "UP"
 
     return res
     .status(
-        healthy 
+        healthy
             ? 200
             : 503
     )
     .json({
-        status: 
+        status:
             healthy
                 ? "UP"
                 : "DOWN",
         uptime: process.uptime(),
         database: db.database,
         redis: cache.redis,
-        service: "Pasaria Api",
-        // message: 'Pasaria E-Commerce API is running on Modular Monolith architecture'
+        service: "Pasaria Api"
     })
 })
 
@@ -71,8 +85,8 @@ app.get('/health/db', async (_, res) => {
 })
 
 // ============ ROUTES ============
-app.use("/products", productRoutes)
-app.use("/auth", authRoutes) // Tambah authRoutes
+// Rate limiter dipasang di level route (auth.routes.ts), bukan di sini
+app.use("/auth", authRoutes)
 app.use("/users", userRoutes)
 
 // ============ ERROR HANDLING ============
@@ -89,27 +103,26 @@ process.on("SIGINT",
     }
 )
 
-
 // ============ BOOTSTRAP ============
 async function bootstrap() {
     try {
+        // Validasi environment SEBELUM mulai server
+        assertEnvironment()
+
         await prisma.$connect()
         console.log("✅ DB CONNECTED")
 
         await redis.connect()
         console.log("✅ REDIS CONNECTED")
-        
+
         app.listen(port, () => {
             console.log(`⚡️[server]: Server Pasaria berjalan di http://localhost:${port}`)
         })
-        
+
     } catch (err) {
         console.error("BOOT FAILED:", err)
         process.exit(1)
     }
-
 }
 
 bootstrap()
-
-

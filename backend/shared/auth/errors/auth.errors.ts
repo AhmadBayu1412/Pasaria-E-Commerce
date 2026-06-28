@@ -22,34 +22,53 @@ export const AUTH_ERRORS = {
     // 401 - Authentication errors
     sessionNotFound: new BusinessError(
         "Session expired. Silakan login kembali.",
-        401
+        401,
+        "SESSION_NOT_FOUND"
     ),
 
     userNotFound: new BusinessError(
         "Akun tidak ditemukan.",
-        401
+        401,
+        "USER_NOT_FOUND"
     ),
 
     invalidCredentials: new BusinessError(
         "Email atau password salah.",
-        401
+        401,
+        "INVALID_CREDENTIALS"
     ),
 
     authRequired: new BusinessError(
         "Silakan login terlebih dahulu.",
-        401
+        401,
+        "AUTH_REQUIRED"
     ),
 
     // 403 - Authorization errors
     userInactive: new BusinessError(
         "Akun non-aktif. Hubungi support.",
-        403
+        403,
+        "USER_INACTIVE"
     ),
 
     accessDenied: new BusinessError(
         "Anda tidak memiliki akses ke endpoint ini.",
-        403
+        403,
+        "ACCESS_DENIED"
     ),
+
+    // 429 - Rate limiting errors
+    tooManyAttempts: new BusinessError(
+        "Terlalu banyak percobaan login. Silakan coba lagi nanti.",
+        429,
+        "ACCOUNT_LOCKED"
+    ),
+
+    rateLimited: new BusinessError(
+        "Terlalu banyak request. Silakan coba lagi nanti.",
+        429,
+        "RATE_LIMIT_EXCEEDED"
+    )
 } as const
 
 /**

@@ -1,7 +1,14 @@
-import { Request, Response, NextFunction } from "express";
-import { loginSchema, registerSchema } from "./auth.schema.js";
-import { authService } from "./auth.service.js";
-import { SESSION_CONFIG } from "../../shared/session/session.config.js";
+import { Request, Response, NextFunction } from "express"
+import { loginSchema, registerSchema } from "./auth.schema.js"
+import { authService } from "./auth.service.js"
+import { SESSION_CONFIG } from "../../shared/session/session.config.js"
+import {
+    generateCsrfToken,
+    storeCsrfToken,
+    setCsrfCookie,
+    deleteCsrfToken,
+    clearCsrfCookie
+} from "../../shared/security/csrf.js"
 
 // ============ REGISTER ============
 export async function register(
@@ -10,32 +17,25 @@ export async function register(
     next: NextFunction
 ) {
     try {
-        // 1. Safe parse - tidak throw, return result
         const result = registerSchema.safeParse(req.body)
 
         if (!result.success) {
-            // Zod validation error
             return res.status(400).json({
                 error: {
                     code: "VALIDATION_ERROR",
-                    message: "Input tidak valid",
-                    details: result.error.flatten()
+                    message: "Input tidak valid"
                 }
             })
         }
 
-        // 2. Delegate ke auth service
         const user = await authService.register(result.data)
 
-        // 3. Return DTO (tanpa bungkus success)
-        return res.status(201).json({
-            data: user
-        })
+        return res.status(201).json({ data: user })
     } catch (error) {
         next(error)
     }
 }
- 
+
 // ============ LOGIN ============
 export async function login(
     req: Request,
@@ -49,29 +49,29 @@ export async function login(
             return res.status(400).json({
                 error: {
                     code: "VALIDATION_ERROR",
-                    message: "Input tidak valid",
-                    details: result.error.flatten()
+                    message: "Input tidak valid"
                 }
             })
         }
 
-        // Login - returns user + sessionId
-        const {user, sessionId} = await authService.login(result.data)
+        const { user, sessionId } = await authService.login(result.data)
 
-        // Set HttpOnly cookie
+        // Set session cookie
         res.cookie(
             SESSION_CONFIG.cookieName,
             sessionId,
             {
                 ...SESSION_CONFIG.cookie,
-                maxAge: SESSION_CONFIG.ttl * 1000 // convert to ms
+                maxAge: SESSION_CONFIG.ttl * 1000
             }
         )
 
-        // Return nested { user } for future JWT compatibility
-        return res.status(200).json({
-            data: { user }
-        })
+        // Generate & store CSRF token untuk session baru
+        const csrfToken = generateCsrfToken()
+        await storeCsrfToken(sessionId, csrfToken)
+        setCsrfCookie(res, csrfToken)
+
+        return res.status(200).json({ data: { user } })
     } catch (error) {
         next(error)
     }
@@ -84,18 +84,22 @@ export async function logout(
     next: NextFunction
 ) {
     try {
-        // req.user.sessionId sudah ada di middleware
         const sessionId = req.user?.sessionId
 
         if (sessionId) {
             await authService.logout(sessionId)
+            // Hapus CSRF token juga
+            await deleteCsrfToken(sessionId)
         }
 
-        // Hapus cookie
+        // Clear session cookie
         res.clearCookie(SESSION_CONFIG.cookieName, {
             ...SESSION_CONFIG.cookie,
             maxAge: 0
         })
+
+        // Clear CSRF cookie
+        clearCsrfCookie(res)
 
         return res.status(200).json({
             data: { message: "Logout berhasil" }

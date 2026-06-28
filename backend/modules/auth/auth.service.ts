@@ -4,18 +4,93 @@ import type { RegisterInput } from "./auth.schema.js"
 import type { LoginResponseDTO, SessionData } from "../../shared/auth/types/auth.types.js"
 import { AUTH_ERRORS } from "../../shared/auth/errors/auth.errors.js"
 import { verifyPassword } from "../../shared/security/password.js"
+import {
+    checkBruteForce,
+    recordFailedAttempt,
+    clearFailedAttempts
+} from "../../shared/security/brute-force.js"
 
 /**
- * Auth service
- * - menangani auth business logic
- * - User lifecycle tetap di userService
+ * Auth Service
+ *
  * Bertanggung jawab:
  * - Register (user creation)
  * - Login (credential verification + session creation)
  *
  * Session lifecycle di-delegate ke sessionService
+ * Brute force protection di-delegate ke brute-force module
  */
 export const authService = {
+    /**
+     * Login User
+     * 1. Check brute force protection
+     * 2. Find user via UserService
+     * 3. verifyPassword()
+     * 4. Clear failed attempts on success
+     * 5. Create session
+     * 6. Return user + sessionId
+     */
+    async login(input: {
+        email: string;
+        password: string;
+        ip?: string
+    }): Promise<{ user: LoginResponseDTO; sessionId: string }> {
+        const identifier = input.email.toLowerCase().trim()
+        const clientIp = input.ip || "unknown"
+
+        // 1. Check brute force SEBELUM credential validation
+        const bruteCheck = await checkBruteForce(clientIp, identifier)
+
+        if (bruteCheck.blocked) {
+            throw AUTH_ERRORS.tooManyAttempts
+        }
+
+        // 2. Find user via UserService (email sudah dinormalisasi)
+        const user = await findByEmail(identifier)
+
+        // 3. Unified error message (security best practice)
+        // Jangan bilang "email tidak ditemukan" atau "password salah"
+        // Gunakan pesan yang sama untuk keduanya
+        if (!user) {
+            await recordFailedAttempt(clientIp, identifier)
+            throw AUTH_ERRORS.invalidCredentials
+        }
+
+        // 4. Check account active
+        if (!user.isActive) {
+            throw AUTH_ERRORS.userInactive
+        }
+
+        // 5. Verify password
+        const isValid = await verifyPassword(input.password, user.passwordHash)
+
+        if (!isValid) {
+            await recordFailedAttempt(clientIp, identifier)
+            throw AUTH_ERRORS.invalidCredentials
+        }
+
+        // 6. Success - clear all failed attempts
+        await clearFailedAttempts(clientIp, identifier)
+
+        // 7. Create session
+        const sessionData: SessionData = {
+            userId: user.id,
+            role: user.role
+        }
+
+        const sessionId = await sessionService.create(sessionData)
+
+        // 8. Return user + sessionId
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role as LoginResponseDTO["role"]
+            },
+            sessionId
+        }
+    },
+
     /**
      * Register user baru
      */
@@ -29,60 +104,6 @@ export const authService = {
             id: user.id,
             email: user.email,
             role: user.role
-        }
-    },
-
-    /**
-     * Login User - SINGLE METHOD, tidak ada loginWithSession
-     * 1. Find user via UserService (NOT direct Prisma)
-     * 2. verifyPassword()
-     * 3. Create session
-     * 4. Return user + sessionId
-     *
-     * Controller handle;
-     * - Set cookie
-     * - Return response
-     */
-    async login(input: {
-        email: string;
-        password: string
-    }): Promise<{ user: LoginResponseDTO; sessionId: string }> {
-        // 1. find user via UserService (email sudah di normalized)
-        const user = await findByEmail(input.email)
-
-        // 2. user not found -> unified error (security)
-        if (!user) {
-            throw AUTH_ERRORS.invalidCredentials
-        }
-
-        // 3. check account active
-        if (!user.isActive) {
-            throw AUTH_ERRORS.userInactive
-        }
-
-        // 4. verify password
-        const isValid = await verifyPassword(input.password, user.passwordHash)
-
-        if (!isValid) {
-            throw AUTH_ERRORS.invalidCredentials
-        }
-
-        // 5. Create session
-        const sessionData: SessionData = {
-            userId: user.id,
-            role: user.role
-        }
-
-        const sessionId = await sessionService.create(sessionData)
-
-        // 6. Return user + sessionId
-        return {
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role as LoginResponseDTO["role"]
-            },
-            sessionId
         }
     },
 
