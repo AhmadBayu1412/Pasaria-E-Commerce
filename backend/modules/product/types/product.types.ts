@@ -1,30 +1,35 @@
 import type { Prisma } from "@prisma/client"
 
-// OPTIMIZED : Step 7 sellerId dihapus dari input
-// karena sellerId selalu berasal dari req.user (session)
+// ============================================================
+// PRODUCT DOMAIN TYPES (Anemic Model)
+// Fokus: type safety, bukan rich behavior
+// ============================================================
+
+// --------------- Aggregate Root -------------------
+export interface Product {
+   readonly id: number;
+   readonly name: string;
+   readonly description: string | null;
+   readonly price: number;  
+   readonly stock: number;
+   readonly sellerId: number; 
+   readonly createdAt: Date;
+   readonly updatedAt: Date;
+}  
+
+// --------------- Input Types (service layer) -------------------
 export interface CreateProductInput {
-    name: string;
-    price: number;
-    stock?: number;  // Optional, default akan diisi di service
-    description?: string; // Untuk sinkronisasi
+   readonly name: string;
+   readonly description?: string;
+   readonly price: number;
+   readonly stock?: number;  
 }
 
 export interface UpdateProductInput {
-    name?: string;
-    price?: number;
-    stock?: number;
-    description?: string;
-    // Note: sellerId tidak boleh diubah setelah product dibuat
+   readonly name?: string;
+   readonly description?: string;
+   readonly price?: number;
+   readonly stock?: number;
 }
+// Note: sellerId tidak boleh diubah setelah product dibuat
 
-// Output type dengan price sebagai number (bukan Decimal string)
-export interface ProductOutput {
-    id: number;
-    name: string;
-    description: string | null;
-    price: number;  // number, bukan string
-    stock: number;
-    createdAt: Date;
-    updatedAt: Date;
-    sellerId: number; // STEP 7: Include sellerId di output
-} 

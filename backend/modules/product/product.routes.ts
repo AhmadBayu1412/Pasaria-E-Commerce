@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getProductsController, createProductController, getProductByIdController, updateProductController, deleteProductController } from "./product.controller.js";
 import { validate } from "../../shared/middleware/validate.js";
-import { createProductSchema, updateProductSchema } from "../../shared/validation/product.validator.js";
+import { createProductSchema, updateProductSchema } from "./validation/product.validation.js";
 import { authenticate } from "../auth/auth.middleware.js";
 import { authorize } from "../authorization/index.js";
 

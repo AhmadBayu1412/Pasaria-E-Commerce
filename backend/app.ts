@@ -18,6 +18,9 @@ import { requestIdMiddleware } from './shared/middleware/request-id.middleware'
 import authRoutes from "./modules/auth/index.js"
 import userRoutes from "./modules/user/user.routes.js"
 
+// PHASE 3 - Product
+import productRoutes from "./modules/product/index.js"
+
 // PHASE 2 - Step 9: Security Hardening
 import { helmetMiddleware } from "./shared/security/helmet.config.js"
 import { assertEnvironment } from "./infra/config/env.validation.js"
@@ -88,6 +91,7 @@ app.get('/health/db', async (_, res) => {
 // Rate limiter dipasang di level route (auth.routes.ts), bukan di sini
 app.use("/auth", authRoutes)
 app.use("/users", userRoutes)
+app.use("/products", productRoutes)
 
 // ============ ERROR HANDLING ============
 app.use(notFound)

@@ -1,4 +1,7 @@
-// @file: modules/product/product.service.ts
+// ============================================================
+// PRODUCT SERVICE - Function Signatures
+// Contract: Business Logic + Transaction + Audit
+// ============================================================
 
 import type { Prisma } from "@prisma/client"
 import { prisma } from "../../infra/db/prisma.js"
@@ -13,8 +16,8 @@ import { assertCanUpdateProduct, assertCanDeleteProduct } from "../ownership/ind
 // ============================================================
 // READ OPERATIONS (Cache-first)
 // ============================================================
-
-export async function getProducts() {
+// ----- Query -----
+export async function getProducts(){
     let cached = null
     try {
         cached = await getCache(CacheKey.productsList)
@@ -241,7 +244,7 @@ export async function deleteProduct(
             const productForAudit = existingProduct
                 ? existingProduct
                 : await tx.product.findUnique({ where: { id } })
-
+ 
             // Delete product
             const result = await tx.product.delete({ where: { id } })
 
