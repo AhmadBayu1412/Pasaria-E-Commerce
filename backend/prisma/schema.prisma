@@ -13,7 +13,22 @@ datasource db {
 }
 
 // ============================================================
-// Product MODEL
+// Category MODEL (Phase 3 Step 2)
+// ============================================================
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relasi: 1 Category → N Products
+  products  Product[]
+
+  @@index([name])
+}
+
+// ============================================================
+// Product MODEL (Phase 3 Step 2 - Added Category relation)
 // ============================================================
 model Product {
   id          Int       @id @default(autoincrement())
@@ -29,6 +44,10 @@ model Product {
 // ============================================================
   sellerId    Int
   seller      User      @relation(fields: [sellerId], references: [id])
+
+// Category Relation (Phase 3 Step 2) - Nullable
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id])
 }
  
 // ============================================================

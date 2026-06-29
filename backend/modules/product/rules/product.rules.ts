@@ -27,5 +27,16 @@ export const ProductRules = {
         if(existing && existing.id !== id) {
             throw new BusinessError("Product name already taken by another product", 409)
         }
-    }  
+    },
+
+    // Phase 3 Step 2: Validasi categoryId harus ada di database
+    async assertCategoryExists(categoryId: number): Promise<void> {
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId }
+        })
+
+        if (!category) {
+            throw new BusinessError("Category not found", 404)
+        }
+    }
 }

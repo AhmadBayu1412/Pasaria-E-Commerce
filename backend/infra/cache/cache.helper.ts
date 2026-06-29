@@ -8,12 +8,14 @@ export const CacheKey = {
     // User
     userList: `${PREFIX}:users:list`,
 
-    // Categories
-    categories: `${PREFIX}:categories:list`,
+    // Category (Phase 3 Step 2)
+    categoriesList: `${PREFIX}:categories:list`,
+    categoryDetail(id: number) { return `${PREFIX}:categories:${id}` },
 
-    // STEP 9
+    // Cart & Order (Phase 2 Step 9)
     cartList: `${PREFIX}:cart:list`,
     cartDetail(userId: number) {return `${PREFIX}:cart:${userId}`},
     orderList: `${PREFIX}:order:list`,
     orderDetail(orderId: number) {return `${PREFIX}:order:${orderId}`}
 }
+ 

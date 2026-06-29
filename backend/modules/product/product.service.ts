@@ -100,6 +100,11 @@ export async function createProduct(
     // 1. Business rule check
     await ProductRules.assertUniqueName(data.name)
 
+    // Phase 3 Step 2: Validasi categoryId jika provided
+    if (data.categoryId) {
+        await ProductRules.assertCategoryExists(data.categoryId)
+    }
+
     // 2. Execute dalam transaction
     const product = await TransactionManager.withTransaction(
         async (tx) => {
@@ -110,7 +115,8 @@ export async function createProduct(
                     description: data.description,
                     price: data.price,
                     stock: data.stock ?? 0,
-                    sellerId: user.id
+                    sellerId: user.id,
+                    categoryId: data.categoryId  // Phase 3 Step 2 - Category relation
                 }
             })
 
@@ -170,6 +176,11 @@ export async function updateProduct(
     // Business rule
     if (data.name) {
         await ProductRules.assertUniqueNameForUpdate(id, data.name)
+    }
+
+    // Phase 3 Step 2: Validasi categoryId jika provided
+    if (data.categoryId) {
+        await ProductRules.assertCategoryExists(data.categoryId)
     }
 
     // STEP 7: Ambil kondisi SEBELUM update untuk audit

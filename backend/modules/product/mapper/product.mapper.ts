@@ -16,6 +16,7 @@ export function toDomain(raw: PrismaProduct): Product {
         price: raw.price.toNumber(),
         stock: raw.stock,
         sellerId: raw.sellerId,
+        categoryId: raw.categoryId,  // Phase 3 Step 2 - Category relation
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt
     }
@@ -35,6 +36,7 @@ export function toDTO(product: Product): ProductResponseDTO {
         price: product.price,
         stock: product.stock,
         sellerId: product.sellerId,
+        categoryId: product.categoryId,  // Phase 3 Step 2 - Category relation
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString()
     }
@@ -49,6 +51,7 @@ export function toDTODirect(raw: PrismaProduct): ProductResponseDTO {
         price: raw.price.toNumber(),
         stock: raw.stock,
         sellerId: raw.sellerId,
+        categoryId: raw.categoryId,  // Phase 3 Step 2 - Category relation
         createdAt: raw.createdAt.toISOString(),
         updatedAt: raw.updatedAt.toISOString()
     }

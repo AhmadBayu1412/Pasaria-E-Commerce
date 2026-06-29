@@ -1,6 +1,6 @@
 import dotenv from 'dotenv'
 dotenv.config()
-
+ 
 import express from "express"
 import cookieParser from "cookie-parser"
 
@@ -24,6 +24,9 @@ import productRoutes from "./modules/product/index.js"
 // PHASE 2 - Step 9: Security Hardening
 import { helmetMiddleware } from "./shared/security/helmet.config.js"
 import { assertEnvironment } from "./infra/config/env.validation.js"
+
+// Phase 3 - Category
+import categoryRoutes from "./modules/category/index.js"
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
@@ -92,6 +95,9 @@ app.get('/health/db', async (_, res) => {
 app.use("/auth", authRoutes)
 app.use("/users", userRoutes)
 app.use("/products", productRoutes)
+
+// ... existing routes ...
+app.use("/categories", categoryRoutes)
 
 // ============ ERROR HANDLING ============
 app.use(notFound)

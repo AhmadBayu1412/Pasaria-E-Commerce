@@ -16,7 +16,8 @@ export const createProductSchema = z.object({
     stock: z.number()
         .int("Stok harus berupa angka bulat")
         .min(0, "Stok tidak boleh negatif")
-        .optional()
+        .optional(),
+    categoryId: z.number().int().positive("Category ID harus berupa angka positif").optional()  // Phase 3 Step 2
 })
 
 export type CreateProductInput = z.infer<typeof createProductSchema>
@@ -34,7 +35,8 @@ export const updateProductSchema = z.object({
     stock: z.number()
         .int("Stok harus berupa angka bulat")
         .min(0, "Stok tidak boleh negatif")
-        .optional()
+        .optional(),
+    categoryId: z.number().int().positive("Category ID harus berupa angka positif").nullable().optional()  // Phase 3 Step 2 - nullable untuk unset
 })
 
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
