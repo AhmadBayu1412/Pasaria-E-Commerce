@@ -1,7 +1,7 @@
 
 // ============================================================
 // PRODUCT DTOs (Data Transfer Objects)
-// Fokus: API contract ONLY, tidak ada validasi
+// Fokus: API contract ONLY
 // ============================================================
 
 // ----- Request DTOs (plain interfaces) -----
@@ -21,7 +21,15 @@ export interface UpdateProductRequestDTO {
     readonly categoryId?: number | null  // Phase 3 Step 2 - Category relation (nullable untuk unset)
 }
 
-// ----- Response DTOs (plain interfaces) -----
+// ----- Pagination Query DTO -----
+export interface PaginationParamsDTO {
+  readonly page?: number
+  readonly limit?: number
+  readonly sortBy?: "name" | "price" | "createdAt" | "stock"
+  readonly sortOrder?: "asc" | "desc"
+}
+
+// ----- Response DTOs -----
 
 export interface ProductResponseDTO {
     readonly id: number
@@ -38,10 +46,26 @@ export interface ProductListResponseDTO {
     readonly products: ProductResponseDTO[]
     readonly count: number
 }
+
+// ----- NEW: Paginated Response DTO -----
+export interface PaginationMeta {
+    readonly page: number
+    readonly limit: number
+    readonly total: number
+    readonly totalPages: number
+    readonly hasNext: boolean
+    readonly hasPrev: boolean
+}
+
+export interface PaginatedProductResponseDTO {
+    readonly success: true
+    readonly data: ProductResponseDTO[]
+    readonly pagination: PaginationMeta
+}
+
 export interface ProductMutationResponseDTO {
     readonly success: true
     readonly data: ProductResponseDTO
     readonly message: string
 }
 
-// ----- Query DTOs: Tidak ada di step 1 -----
