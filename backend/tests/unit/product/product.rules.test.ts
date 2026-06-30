@@ -113,7 +113,8 @@ describe("ProductRules", () => {
                 updatedAt: new Date(),
                 description: null,
                 price: "100" as any,
-                stock: 10,
+                availableStock: 10,
+                reservedStock: 0,
                 categoryId: null
             })
 
@@ -142,7 +143,8 @@ describe("ProductRules", () => {
                 updatedAt: new Date(),
                 description: null,
                 price: "100" as any,
-                stock: 10,
+                availableStock: 10,
+                reservedStock: 0,
                 categoryId: null
             })
 
@@ -163,7 +165,8 @@ describe("ProductRules", () => {
                 updatedAt: new Date(),
                 description: null,
                 price: "100" as any,
-                stock: 10,
+                availableStock: 10,
+                reservedStock: 0,
                 categoryId: null
             })
 

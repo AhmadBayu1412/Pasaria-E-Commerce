@@ -15,38 +15,45 @@ import type { AuthenticatedUser } from "../../../shared/session/session.types.js
 
 // ----- Normalize Product for Response -----
 function normalizeProduct(product: any): ProductResponseDTO {
+    const availableStock = product.availableStock ?? 0
+    const reservedStock = product.reservedStock ?? 0
+
     return {
         id: product.id,
         name: product.name,
         description: product.description,
         price: product.price.toNumber ? product.price.toNumber() : product.price,
-        stock: product.stock,
+        // --- Inventory Fields (Phase 3 Step 4) ---
+        availableStock,
+        reservedStock,
+        totalStock: availableStock + reservedStock,
+        // -------------------------------------------
         sellerId: product.sellerId,
         categoryId: product.categoryId,
-        createdAt: product.createdAt instanceof Date 
-        ? product.createdAt.toISOString() 
+        createdAt: product.createdAt instanceof Date
+        ? product.createdAt.toISOString()
         : new Date(product.createdAt).toISOString(),
-        updatedAt: product.updatedAt instanceof Date 
-        ? product.updatedAt.toISOString() 
+        updatedAt: product.updatedAt instanceof Date
+        ? product.updatedAt.toISOString()
         : new Date(product.updatedAt).toISOString()
     }
-    }
+}
 
-    // ============================================================
-    // READ OPERATIONS (Cache-first)
-    // ============================================================
+// ============================================================
+// READ OPERATIONS (Cache-first)
+// ============================================================
 
-    /**
-     * GET PRODUCTS - Pagination Version
-     * 
-     * Visibility:
-     * - ADMIN/SELLER: semua produk mereka
-     * - CUSTOMER/PUBLIC: hanya produk yang visible (future: status=ACTIVE)
-     */
-    export async function getProducts(
+/**
+ * GET PRODUCTS - Pagination Version
+ *
+ * Visibility:
+ * - ADMIN/SELLER: semua produk mereka
+ * - CUSTOMER/PUBLIC: hanya produk yang visible (future: status=ACTIVE)
+ */
+export async function getProducts(
     params: PaginationParamsDTO = {},
     user?: AuthenticatedUser
-    ): Promise<PaginatedProductResponseDTO> {
+): Promise<PaginatedProductResponseDTO> {
     const {
         page = 1,
         limit = 20,
@@ -97,14 +104,14 @@ function normalizeProduct(product: any): ProductResponseDTO {
         hasPrev: page > 1
         }
     }
-    }
+}
 
-    /**
-     * GET PRODUCT BY ID - Single product fetch
-     */
-    export async function getProductById(id: number): Promise<ProductResponseDTO | null> {
+/**
+ * GET PRODUCT BY ID - Single product fetch
+ */
+export async function getProductById(id: number): Promise<ProductResponseDTO | null> {
     const key = CacheKey.productDetail(id)
-    
+
     let cached = null
     try {
         cached = await getCache(key)
@@ -138,19 +145,19 @@ function normalizeProduct(product: any): ProductResponseDTO {
     }
 
     return null
-    }
+}
 
-    // ============================================================
-    // WRITE OPERATIONS (With Transaction + Audit)
-    // ============================================================
+// ============================================================
+// WRITE OPERATIONS (With Transaction + Audit)
+// ============================================================
 
-    /**
-     * CREATE PRODUCT
-     */
-    export async function createProduct(
+/**
+ * CREATE PRODUCT
+ */
+export async function createProduct(
     data: CreateProductInput,
     user: AuthenticatedUser
-    ): Promise<ProductResponseDTO> {
+): Promise<ProductResponseDTO> {
     // 1. Business rule check
     await assertUniqueName(data.name)
 
@@ -166,7 +173,10 @@ function normalizeProduct(product: any): ProductResponseDTO {
             name: data.name,
             description: data.description,
             price: data.price,
-            stock: data.stock ?? 0,
+            // --- Inventory Fields (Phase 3 Step 4) ---
+            availableStock: data.availableStock ?? 0,
+            reservedStock: data.reservedStock ?? 0,
+            // -------------------------------------------
             sellerId: user.id,
             categoryId: data.categoryId
             }
@@ -191,16 +201,16 @@ function normalizeProduct(product: any): ProductResponseDTO {
     )
 
     return normalizeProduct(product)
-    }
+}
 
-    /**
-     * UPDATE PRODUCT
-     */
-    export async function updateProduct(
+/**
+ * UPDATE PRODUCT
+ */
+export async function updateProduct(
     id: number,
     data: UpdateProductInput,
     user: AuthenticatedUser
-    ): Promise<ProductResponseDTO> {
+): Promise<ProductResponseDTO> {
     // 1. Ownership check
     await assertOwnership(id, user)
 
@@ -244,15 +254,15 @@ function normalizeProduct(product: any): ProductResponseDTO {
     )
 
     return normalizeProduct(updated)
-    }
+}
 
-    /**
-     * DELETE PRODUCT
-     */
-    export async function deleteProduct(
+/**
+ * DELETE PRODUCT
+ */
+export async function deleteProduct(
     id: number,
     user: AuthenticatedUser
-    ): Promise<void> {
+): Promise<void> {
     // 1. Ownership check (returns product for audit if seller)
     const existingProduct = await assertOwnership(id, user)
 

@@ -26,14 +26,14 @@ describe("CategoryRules", () => {
 
     describe("assertUniqueName", () => {
         it("should pass when category name does not exist", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.category.findFirst).mockResolvedValue(null)
 
             await expect(CategoryRules.assertUniqueName("Electronics")).resolves.toBeUndefined()
         })
 
         it("should throw 409 when category name already exists (case insensitive)", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.category.findFirst).mockResolvedValue({
                 id: 1,
                 name: "Electronics",
@@ -49,7 +49,7 @@ describe("CategoryRules", () => {
 
     describe("assertUniqueNameForUpdate", () => {
         it("should pass when updating to same name (self)", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.category.findFirst).mockResolvedValue({
                 id: 1,
                 name: "Electronics",
@@ -61,10 +61,12 @@ describe("CategoryRules", () => {
         })
 
         it("should throw 409 when name is taken by another category", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.category.findFirst).mockResolvedValue({
                 id: 2,
-                name: "Fashion"
+                name: "Fashion",
+                createdAt: new Date(),
+                updatedAt: new Date()
             })
 
             await expect(CategoryRules.assertUniqueNameForUpdate(1, "Fashion")).rejects.toThrow(BusinessError)
@@ -73,7 +75,7 @@ describe("CategoryRules", () => {
 
     describe("assertCategoryExists", () => {
         it("should pass when category exists", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.category.findUnique).mockResolvedValue({
                 id: 1,
                 name: "Electronics",
@@ -85,7 +87,7 @@ describe("CategoryRules", () => {
         })
 
         it("should throw 404 when category does not exist", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.category.findUnique).mockResolvedValue(null)
 
             await expect(CategoryRules.assertCategoryExists(999)).rejects.toThrow(BusinessError)
@@ -99,14 +101,14 @@ describe("CategoryRules", () => {
 
     describe("assertCategoryNotInUse", () => {
         it("should pass when no products use the category", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.product.count).mockResolvedValue(0)
 
             await expect(CategoryRules.assertCategoryNotInUse(1)).resolves.toBeUndefined()
         })
 
         it("should throw 409 when products use the category", async () => {
-            const { prisma } = await import("../../../infra/db/prisma")
+            const { prisma } = await import("../../../infra/db/prisma.js")
             vi.mocked(prisma.product.count).mockResolvedValue(5)
 
             await expect(CategoryRules.assertCategoryNotInUse(1)).rejects.toThrow(BusinessError)

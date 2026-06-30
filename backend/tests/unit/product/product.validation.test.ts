@@ -79,12 +79,12 @@ describe("Product Validation Schemas", () => {
             name: "Test Product",
             description: "A test product",
             price: 99.99,
-            stock: 10,
+            availableStock: 10,
             categoryId: 1
         }
-        
+
         const result = createProductSchema.safeParse(input)
-        
+
         expect(result.success).toBe(true)
         })
 
@@ -124,23 +124,23 @@ describe("Product Validation Schemas", () => {
         expect(result.success).toBe(false)
         })
 
-        it("should reject negative stock", () => {
+        it("should reject negative availableStock", () => {
         const result = createProductSchema.safeParse({
             name: "Test",
             price: 99.99,
-            stock: -1
+            availableStock: -1
         })
-        
+
         expect(result.success).toBe(false)
         })
 
-        it("should reject non-integer stock", () => {
+        it("should reject non-integer availableStock", () => {
         const result = createProductSchema.safeParse({
             name: "Test",
             price: 99.99,
-            stock: 1.5
+            availableStock: 1.5
         })
-        
+
         expect(result.success).toBe(false)
         })
 

@@ -10,7 +10,7 @@ import type { AuthenticatedUser } from "../../../shared/session/session.types.js
 // ----- Generic Ownership Assertion -----
 /**
  * Validasi apakah user boleh mengakses produk
- * 
+ *  
  * Aturan:
  * - ADMIN: bypass semua ownership check
  * - SELLER: hanya boleh akses produk miliknya sendiri
@@ -82,4 +82,106 @@ export async function assertOwnership(
     })
 
     return product?.sellerId ?? null
+}
+
+// ======= INVENTORY RULES =======
+
+/**
+ * Validasi: Apakah quantity valid (> 0)?
+ */
+export function assertPositiveQuantity(quantity: number): void {
+    if (quantity < 1) {
+        throw new BusinessError(
+        "Quantity harus lebih dari 0",
+        400,
+        "INVALID_QUANTITY"
+        )
+    }
+}
+
+/**
+ * Validasi: Apakah stok tersedia cukup untuk decrease?
+ */
+export async function assertCanDecrease(
+    productId: number,
+    quantity: number
+    ): Promise<{ id: number; availableStock: number }> {
+    assertPositiveQuantity(quantity)
+    
+    const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { id: true, availableStock: true }
+    })
+    
+    if (!product) {
+        throw new BusinessError("Produk tidak ditemukan", 404, "PRODUCT_NOT_FOUND")
+    }
+    
+    if (product.availableStock < quantity) {
+        throw new BusinessError(
+        `Stok tersedia tidak cukup. Tersedia: ${product.availableStock}, Diminta: ${quantity}`,
+        400,
+        "INSUFFICIENT_AVAILABLE_STOCK"
+        )
+    }
+    
+    return product
+}
+
+/**
+ * Validasi: Apakah stok tersedia cukup untuk reserve?
+ */
+export async function assertCanReserve(
+    productId: number,
+    quantity: number
+): Promise<{ id: number; availableStock: number }> {
+    assertPositiveQuantity(quantity)
+    
+    const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { id: true, availableStock: true }
+    })
+    
+    if (!product) {
+        throw new BusinessError("Produk tidak ditemukan", 404, "PRODUCT_NOT_FOUND")
+    }
+    
+    if (product.availableStock < quantity) {
+        throw new BusinessError(
+        "Stok tidak cukup untuk di-reserve",
+        400,
+        "INSUFFICIENT_STOCK"
+        )
+    }
+    
+    return product
+}
+
+/**
+ * Validasi: Apakah reserved stock cukup untuk di-release?
+ */
+export async function assertCanRelease(
+    productId: number,
+    quantity: number
+): Promise<{ id: number; reservedStock: number }> {
+    assertPositiveQuantity(quantity)
+    
+    const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { id: true, reservedStock: true }
+    })
+    
+    if (!product) {
+        throw new BusinessError("Produk tidak ditemukan", 404, "PRODUCT_NOT_FOUND")
+    }
+    
+    if (product.reservedStock < quantity) {
+        throw new BusinessError(
+        `Reserved stock tidak cukup. Tersedia: ${product.reservedStock}, Diminta: ${quantity}`,
+        400,
+        "INSUFFICIENT_RESERVED_STOCK"
+        )
+    }
+    
+    return product
 }

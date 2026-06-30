@@ -8,12 +8,130 @@ import {
     getProducts,
     getProductById,
     createProduct,
-    updateProduct,
+    updateProduct, 
     deleteProduct
 } from "../services/product.service.js"
 import type { AuthenticatedUser } from "../../../shared/session/session.types.js"
 import type { PaginationParamsDTO } from "../types/product.dto.js"
 import { paginationQuerySchema } from "../validation/product.validation.js"
+// Tambahkan import
+import { inventoryOperationRequestSchema } from "../validation/product.validation.js"
+import {
+    getInventory,
+    increaseStock,
+    decreaseStock,
+    reserveStock,
+    releaseReserved
+} from "../services/inventory.service.js"
+
+/**
+ * PATCH /products/:id/inventory
+ * 
+ * Inventory operations: increase, decrease, reserve, release
+ * 
+ * Request body:
+ * {
+ *   operation: "increase" | "decrease" | "reserve" | "release",
+ *   quantity: number
+ * }
+ * 
+ * Auth:
+ * - increase/decrease: ADMIN atau SELLER (ownership check)
+ * - reserve/release: PUBLIC (dipanggil oleh Cart service)
+ */
+export async function updateInventoryController(
+    req: Request,
+    res: Response,
+    next: NextFunction
+    ): Promise<void> {
+    try {
+        // 1. Parse product ID
+        const productId = parseProductId(req.params.id)
+        if (productId === null) {
+        res.status(400).json({
+            success: false,
+            message: "Invalid product ID"
+        })
+        return
+        }
+        
+        // 2. Validate request body
+        const validation = inventoryOperationRequestSchema.safeParse(req.body)
+        if (!validation.success) {
+        res.status(400).json({
+            success: false,
+            message: "Invalid request body",
+            errors: validation.error.flatten()
+        })
+        return
+        }
+        
+        const { operation, quantity } = validation.data
+        
+        // 3. Execute based on operation type
+        switch (operation) {
+        case "increase":
+        case "decrease": {
+            // Require authentication + ownership
+            const user = req.user as AuthenticatedUser
+            if (!user || user.role === "CUSTOMER") {
+            res.status(403).json({
+                success: false,
+                message: "Hanya seller atau admin yang dapat mengubah stok"
+            })
+            return
+            }
+            
+            const result = operation === "increase"
+            ? await increaseStock(productId, quantity, user)
+            : await decreaseStock(productId, quantity, user)
+            
+            const inventory = await getInventory(productId)
+            
+            res.json({
+            success: true,
+            data: inventory,
+            message: operation === "increase"
+                ? "Stok berhasil ditambahkan"
+                : "Stok berhasil dikurangi"
+            })
+            break
+        }
+        
+        case "reserve": {
+            // No auth required (called by Cart)
+            const result = await reserveStock(productId, quantity)
+            
+            res.json({
+            success: true,
+            data: {
+                productId,
+                reservedQuantity: result.reservedQuantity,
+                remainingAvailable: result.remainingAvailable
+            }
+            })
+            break
+        }
+        
+        case "release": {
+            // No auth required (called by Cart)
+            const result = await releaseReserved(productId, quantity)
+            
+            res.json({
+            success: true,
+            data: {
+                productId,
+                releasedQuantity: quantity,
+                reservedStockNow: result.remainingAvailable
+            }
+            })
+            break
+        }
+        }
+    } catch (err) {
+        next(err)
+    }
+}
 
 /**
  * GET /products

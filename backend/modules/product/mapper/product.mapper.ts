@@ -14,7 +14,10 @@ export function toDomain(raw: PrismaProduct): Product {
         name: raw.name,
         description: raw.description,
         price: raw.price.toNumber(),
-        stock: raw.stock,
+        // --- Inventory Fields (Phase 3 Step 4) ---
+        availableStock: raw.availableStock,
+        reservedStock: raw.reservedStock,
+        // -------------------------------------------
         sellerId: raw.sellerId,
         categoryId: raw.categoryId,  // Phase 3 Step 2 - Category relation
         createdAt: raw.createdAt,
@@ -29,12 +32,19 @@ export function toDomainList(rawList: PrismaProduct[]): Product[] {
 
 // ----- Domain -> DTO -----
 export function toDTO(product: Product): ProductResponseDTO {
+    const availableStock = product.availableStock
+    const reservedStock = product.reservedStock
+
     return {
         id: product.id,
         name: product.name,
         description: product.description,
         price: product.price,
-        stock: product.stock,
+        // --- Inventory Fields (Phase 3 Step 4) ---
+        availableStock,
+        reservedStock,
+        totalStock: availableStock + reservedStock,
+        // -------------------------------------------
         sellerId: product.sellerId,
         categoryId: product.categoryId,  // Phase 3 Step 2 - Category relation
         createdAt: product.createdAt.toISOString(),
@@ -44,12 +54,19 @@ export function toDTO(product: Product): ProductResponseDTO {
 
 // ----- Prisma -> DTO (Direct, untuk response tanpa domain object) -----
 export function toDTODirect(raw: PrismaProduct): ProductResponseDTO {
+    const availableStock = raw.availableStock
+    const reservedStock = raw.reservedStock
+
     return {
         id: raw.id,
         name: raw.name,
         description: raw.description,
         price: raw.price.toNumber(),
-        stock: raw.stock,
+        // --- Inventory Fields (Phase 3 Step 4) ---
+        availableStock,
+        reservedStock,
+        totalStock: availableStock + reservedStock,
+        // -------------------------------------------
         sellerId: raw.sellerId,
         categoryId: raw.categoryId,  // Phase 3 Step 2 - Category relation
         createdAt: raw.createdAt.toISOString(),

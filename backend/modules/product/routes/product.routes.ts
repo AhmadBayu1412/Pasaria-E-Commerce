@@ -4,7 +4,8 @@ import {
     getProductByIdController,
     createProductController,
     updateProductController,
-    deleteProductController
+    deleteProductController,
+    updateInventoryController
 } from "../controllers/product.controller.js"
 import { validate } from "../../../shared/middleware/validate.js"
 import { createProductSchema, updateProductSchema } from "../validation/product.validation.js"
@@ -12,7 +13,7 @@ import { authenticate } from "../../auth/auth.middleware.js"
 import { authorize } from "../../authorization/index.js"
 
 const router = Router()
-
+ 
 // ============ PUBLIC ROUTES ============
 // GET /products - dengan pagination
 // GET /products/:id
@@ -44,6 +45,12 @@ router.post(
     authenticate,
     authorize("ADMIN", "SELLER"),
     deleteProductController
+)
+
+// PATCH /products/:id/inventory - Inventory operations
+router.patch(
+    "/:id/inventory",
+    updateInventoryController
 )
 
 export default router
