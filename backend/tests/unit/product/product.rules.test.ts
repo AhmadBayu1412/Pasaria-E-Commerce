@@ -115,8 +115,10 @@ describe("ProductRules", () => {
                 price: "100" as any,
                 availableStock: 10,
                 reservedStock: 0,
-                categoryId: null
-            })
+                categoryId: null,
+                basePrice: "100" as any,
+                discountPrice: null
+            } as any)
 
             await expect(
                 assertUniqueName("Existing")
@@ -145,8 +147,10 @@ describe("ProductRules", () => {
                 price: "100" as any,
                 availableStock: 10,
                 reservedStock: 0,
-                categoryId: null
-            })
+                categoryId: null,
+                basePrice: "100" as any,
+                discountPrice: null
+            } as any)
 
             await expect(
                 assertUniqueNameForUpdate(1, "Product")
@@ -167,8 +171,10 @@ describe("ProductRules", () => {
                 price: "100" as any,
                 availableStock: 10,
                 reservedStock: 0,
-                categoryId: null
-            })
+                categoryId: null,
+                basePrice: "100" as any,
+                discountPrice: null
+            } as any)
 
             await expect(
                 assertUniqueNameForUpdate(1, "Taken")

@@ -1,5 +1,5 @@
 // modules/product/routes/product.routes.ts
-// UPDATE: Tambahkan image routes
+// UPDATE: Add pricing routes
 
 import { Router } from "express"
 import {
@@ -18,8 +18,13 @@ import {
   reorderImagesController,
   setPrimaryImageController
 } from "../controllers/image.controller.js"
+import {
+  getProductPricingController,
+  updatePricingController
+} from "../controllers/pricing.controller.js"
 import { validate } from "../../../shared/middleware/validate.js"
 import { createProductSchema, updateProductSchema } from "../validation/product.validation.js"
+import { updatePricingSchema } from "../validation/pricing.validation.js"
 import { authenticate } from "../../auth/auth.middleware.js"
 import { authorize } from "../../authorization/index.js"
 import { upload } from "../../../shared/middleware/upload.js"
@@ -37,6 +42,10 @@ router.get("/:id", getProductByIdController)
 // GET /products/:id/images/:imageId
 router.get("/:id/images", getProductImagesController)
 router.get("/:id/images/:imageId", getImageByIdController)
+
+// ============ PRICING - PUBLIC ============
+// GET /products/:id/pricing
+router.get("/:id/pricing", getProductPricingController)
 
 // ============ PROTECTED ROUTES ============
 // POST /products - Create new product
@@ -100,6 +109,16 @@ router.patch(
   authenticate,
   authorize("ADMIN", "SELLER"),
   setPrimaryImageController
+)
+
+// ============ PRICING - PROTECTED ============
+// PATCH /products/:id/pricing - Update pricing
+router.patch(
+  "/:id/pricing",
+  authenticate,
+  authorize("ADMIN", "SELLER"),
+  validate(updatePricingSchema),
+  updatePricingController
 )
 
 export default router
