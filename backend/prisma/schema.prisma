@@ -52,8 +52,32 @@ model Product {
 // Category Relation (Phase 3 Step 2) - Nullable
   categoryId  Int?
   category    Category? @relation(fields: [categoryId], references: [id])
+
+  // ===== Product Images (Phase 3 Step 5) =====
+  images      ProductImage[]
 }
  
+ // ===== PRODUCTIMGAE MODEL =====
+model ProductImage {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Metadata domain
+  path       String   // Local path: "uploads/products/1/abc123.jpg"
+  filename   String   // Original filename: "product-photo.jpg"
+  mimeType   String   // "image/jpeg", "image/png", "image/webp"
+  size       Int      // File size in bytes
+  position   Int      @default(0)  // Display order (0 = first)
+  isPrimary  Boolean  @default(false)  // Only 1 primary per product
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId, position])
+  @@index([productId, isPrimary])
+}
+
 // ============================================================
 // Audit MODULE (Phase 1)
 // ============================================================
