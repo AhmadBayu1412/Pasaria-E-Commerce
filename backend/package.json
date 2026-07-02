@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch app.ts",
+    "dev:worker": "tsx watch worker.ts",
+    "dev:all": "npm run dev & npm run dev:worker",
     "build": "tsc",
     "start": "node dist/app.js",
+    "start:worker": "node dist/worker.js",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
@@ -18,6 +21,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
+    "bullmq": "^5.79.2",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

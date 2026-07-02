@@ -12,6 +12,7 @@ import type { PaginationParamsDTO, PaginatedProductResponseDTO, ProductResponseD
 import { assertOwnership, assertUniqueName, assertUniqueNameForUpdate, assertCategoryExists } from "../rules/product.rules.js"
 import { TransactionManager } from "../../../shared/transaction/transaction.js"
 import type { AuthenticatedUser } from "../../../shared/session/session.types.js"
+import { queueProductReindex } from "../../../infra/queue/producer.js"
 
 // ----- Normalize Product for Response -----
 function normalizeProduct(product: any): ProductResponseDTO {
@@ -219,6 +220,11 @@ export async function createProduct(
     // 3. Invalidate caches
     await invalidateProductCaches(product.id, product.sellerId)
 
+    // 4. Queue reindex job (AFTER successful commit)
+    queueProductReindex(product.id).catch(err => {
+        console.error("[PRODUCT] Failed to queue reindex job:", err)
+    })
+
     return normalizeProduct(product)
 }
 
@@ -274,6 +280,11 @@ export async function updateProduct(
 
     // 5. Invalidate caches
     await invalidateProductCaches(updated.id, updated.sellerId)
+
+    // 6. Queue reindex job (AFTER successful commit)
+    queueProductReindex(updated.id).catch(err => {
+        console.error("[PRODUCT] Failed to queue reindex job:", err)
+    })
 
     return normalizeProduct(updated)
 }

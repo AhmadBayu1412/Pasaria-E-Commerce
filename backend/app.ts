@@ -8,6 +8,7 @@ import { prisma } from "./infra/db/prisma"
 import { redis } from "./infra/cache/redis"
 import { checkDatabaseHealth } from './infra/db/health'
 import { checkRedisHealth } from './infra/cache/health'
+import { getQueueStatus } from './infra/queue/bullmq.js'
 
 // PHASE 1
 import { errorMiddleware } from './shared/middleware/error.middleware'
@@ -54,11 +55,14 @@ app.use(requestIdMiddleware)
 app.get('/health', async (_, res) => {
     const db = await checkDatabaseHealth()
     const cache = await checkRedisHealth()
+    const queue = await getQueueStatus()
 
     const healthy =
         db.database === "UP"
         &&
         cache.redis === "UP"
+        &&
+        queue.isReady
 
     return res
     .status(
@@ -74,6 +78,11 @@ app.get('/health', async (_, res) => {
         uptime: process.uptime(),
         database: db.database,
         redis: cache.redis,
+        queue: {
+            name: queue.name,
+            isReady: queue.isReady,
+            jobs: queue.jobCounts
+        },
         service: "Pasaria Api"
     })
 })
