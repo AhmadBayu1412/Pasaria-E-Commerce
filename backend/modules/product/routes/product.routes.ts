@@ -1,5 +1,5 @@
 // modules/product/routes/product.routes.ts
-// UPDATE: Add pricing routes
+// UPDATE: Add search route
 
 import { Router } from "express"
 import {
@@ -22,6 +22,9 @@ import {
   getProductPricingController,
   updatePricingController
 } from "../controllers/pricing.controller.js"
+import {
+  searchProductsController
+} from "../controllers/search.controller.js"
 import { validate } from "../../../shared/middleware/validate.js"
 import { createProductSchema, updateProductSchema } from "../validation/product.validation.js"
 import { updatePricingSchema } from "../validation/pricing.validation.js"
@@ -32,23 +35,25 @@ import { upload } from "../../../shared/middleware/upload.js"
 const router = Router()
 
 // ============ PUBLIC ROUTES ============
-// GET /products
-// GET /products/:id
+// GET /products (list all with pagination)
+// IMPORTANT: /search must come BEFORE /:id to avoid "search" being matched as ID
 router.get("/", getProductsController)
+
+// ============ SEARCH ============
+// GET /products/search
+router.get("/search", searchProductsController)
+
+// GET /products/:id
 router.get("/:id", getProductByIdController)
 
 // ============ PRODUCT IMAGES - PUBLIC ============
-// GET /products/:id/images
-// GET /products/:id/images/:imageId
 router.get("/:id/images", getProductImagesController)
 router.get("/:id/images/:imageId", getImageByIdController)
 
 // ============ PRICING - PUBLIC ============
-// GET /products/:id/pricing
 router.get("/:id/pricing", getProductPricingController)
 
 // ============ PROTECTED ROUTES ============
-// POST /products - Create new product
 router.post(
   "/",
   authenticate,
@@ -57,7 +62,6 @@ router.post(
   createProductController
 )
 
-// PUT /products/:id - Update product
 router.put(
   "/:id",
   authenticate,
@@ -66,7 +70,6 @@ router.put(
   updateProductController
 )
 
-// DELETE /products/:id - Delete product
 router.delete(
   "/:id",
   authenticate,
@@ -74,11 +77,9 @@ router.delete(
   deleteProductController
 )
 
-// PATCH /products/:id/inventory - Inventory operations
 router.patch("/:id/inventory", updateInventoryController)
 
 // ============ PRODUCT IMAGES - PROTECTED ============
-// POST /products/:id/images - Upload image
 router.post(
   "/:id/images",
   authenticate,
@@ -87,7 +88,6 @@ router.post(
   uploadImageController
 )
 
-// DELETE /products/:id/images/:imageId - Delete image
 router.delete(
   "/:id/images/:imageId",
   authenticate,
@@ -95,7 +95,6 @@ router.delete(
   deleteImageController
 )
 
-// PATCH /products/:id/images/reorder - Reorder images
 router.patch(
   "/:id/images/reorder",
   authenticate,
@@ -103,7 +102,6 @@ router.patch(
   reorderImagesController
 )
 
-// PATCH /products/:id/images/:imageId/primary - Set as primary
 router.patch(
   "/:id/images/:imageId/primary",
   authenticate,
@@ -112,7 +110,6 @@ router.patch(
 )
 
 // ============ PRICING - PROTECTED ============
-// PATCH /products/:id/pricing - Update pricing
 router.patch(
   "/:id/pricing",
   authenticate,

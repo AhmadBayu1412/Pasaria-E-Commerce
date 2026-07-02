@@ -1,21 +1,26 @@
 // modules/product/index.ts
-// UPDATE: Export pricing modules
+// UPDATE: Export search modules
 
 export * from "./controllers/product.controller.js"
 export * from "./controllers/image.controller.js"
 export * from "./controllers/pricing.controller.js"
+export * from "./controllers/search.controller.js"
 export * from "./services/product.service.js"
 export * from "./services/image.service.js"
 export * from "./services/inventory.service.js"
 export * from "./services/pricing.service.js"
+export * from "./services/search.service.js"
 export * from "./rules/product.rules.js"
 export * from "./rules/image.rules.js"
 export * from "./rules/pricing.rules.js"
+export * from "./rules/search.rules.js"
 export * from "./validation/product.validation.js"
 export * from "./validation/image.validation.js"
 export * from "./validation/pricing.validation.js"
+export * from "./validation/search.validation.js"
 export * from "./types/product.dto.js"
 export * from "./types/image.dto.js"
 export * from "./types/pricing.dto.js"
+export * from "./types/search.dto.js"
 
 export { default } from "./routes/product.routes.js"
