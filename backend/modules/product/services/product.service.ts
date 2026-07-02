@@ -5,8 +5,8 @@
 
 import type { Prisma } from "@prisma/client"
 import { prisma } from "../../../infra/db/prisma.js"
-import { getCache, setCache } from "../../../infra/cache/redis.service.js"
 import { CacheKey } from "../../../infra/cache/cache.helper.js"
+import { cacheDelete, cacheDeletePattern, cacheSet, getCache } from "../../../shared/cache/index.js"
 import type { CreateProductInput, UpdateProductInput } from "../validation/product.validation.js"
 import type { PaginationParamsDTO, PaginatedProductResponseDTO, ProductResponseDTO } from "../types/product.dto.js"
 import { assertOwnership, assertUniqueName, assertUniqueNameForUpdate, assertCategoryExists } from "../rules/product.rules.js"
@@ -37,6 +37,31 @@ function normalizeProduct(product: any): ProductResponseDTO {
         ? product.updatedAt.toISOString()
         : new Date(product.updatedAt).toISOString()
     }
+}
+
+// ============================================================
+// CACHE INVALIDATION HELPERS
+// ============================================================
+
+/**
+ * Invalidate all caches related to a product mutation
+ */
+async function invalidateProductCaches(productId: number, sellerId?: number): Promise<void> {
+    const tasks: Promise<unknown>[] = []
+
+    // 1. Delete product detail cache
+    tasks.push(cacheDelete(CacheKey.productDetail(productId)))
+
+    // 2. Delete seller's product list cache
+    if (sellerId) {
+        tasks.push(cacheDelete(`${CacheKey.productsList}:${sellerId}`))
+    }
+
+    // 3. Delete all search caches (simple invalidation strategy)
+    tasks.push(cacheDeletePattern(`${CacheKey.productSearchPrefix}*`))
+
+    // Execute all in parallel
+    await Promise.all(tasks)
 }
 
 // ============================================================
@@ -107,21 +132,16 @@ export async function getProducts(
 }
 
 /**
- * GET PRODUCT BY ID - Single product fetch
+ * GET PRODUCT BY ID - Single product fetch with cache
  */
 export async function getProductById(id: number): Promise<ProductResponseDTO | null> {
     const key = CacheKey.productDetail(id)
 
-    let cached = null
-    try {
-        cached = await getCache(key)
-    } catch {
-        console.log("[CACHE SKIPPED]")
-    }
-
+    // Try cache first
+    const cached = await getCache<ProductResponseDTO>(key)
     if (cached) {
         console.log(`[CACHE HIT] product ${id}`)
-        return cached as ProductResponseDTO
+        return cached
     }
 
     console.log(`[CACHE MISS] product ${id}`)
@@ -136,11 +156,7 @@ export async function getProductById(id: number): Promise<ProductResponseDTO | n
 
     if (product) {
         const normalized = normalizeProduct(product)
-        try {
-        await setCache(key, normalized, 300)
-        } catch {
-        console.log("[CACHE DETAIL STORE FAILED]")
-        }
+        await cacheSet(key, normalized, 600) // 10 minutes TTL
         return normalized
     }
 
@@ -200,6 +216,9 @@ export async function createProduct(
         [CacheKey.productsList]
     )
 
+    // 3. Invalidate caches
+    await invalidateProductCaches(product.id, product.sellerId)
+
     return normalizeProduct(product)
 }
 
@@ -253,6 +272,9 @@ export async function updateProduct(
         [CacheKey.productsList, CacheKey.productDetail(id)]
     )
 
+    // 5. Invalidate caches
+    await invalidateProductCaches(updated.id, updated.sellerId)
+
     return normalizeProduct(updated)
 }
 
@@ -263,14 +285,20 @@ export async function deleteProduct(
     id: number,
     user: AuthenticatedUser
 ): Promise<void> {
-    // 1. Ownership check (returns product for audit if seller)
-    const existingProduct = await assertOwnership(id, user)
+    // 1. Get product data before delete (for invalidation)
+    const productToDelete = await prisma.product.findUnique({ where: { id } })
+
+    // 2. Ownership check (returns product for audit if seller)
+    await assertOwnership(id, user)
+
+    // 3. Invalidate caches BEFORE delete
+    if (productToDelete) {
+        await invalidateProductCaches(productToDelete.id, productToDelete.sellerId)
+    }
 
     await TransactionManager.withTransaction(
         async (tx) => {
-        const productForAudit = existingProduct
-            ? await tx.product.findUnique({ where: { id } })
-            : existingProduct
+        const productForAudit = productToDelete
 
         const result = await tx.product.delete({ where: { id } })
 

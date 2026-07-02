@@ -3,7 +3,10 @@ const PREFIX = "pasaria"
 export const CacheKey = {
     // Product
     productsList: `${PREFIX}:products:list`,
-    productDetail(id:number){return `${PREFIX}:products:${id}`},
+    productDetail(id:number){return `${PREFIX}:products:detail:${id}`},
+
+    // Product Search (Step 8)
+    productSearchPrefix: `${PREFIX}:products:search:`,
 
     // User
     userList: `${PREFIX}:users:list`,

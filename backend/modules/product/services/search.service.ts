@@ -1,6 +1,9 @@
 import { prisma } from "../../../infra/db/prisma.js"
 import { SearchProductsInput } from "../validation/search.validation.js"
 import { SearchResponseDTO, ProductSearchSummaryDTO } from "../types/search.dto.js"
+import { cacheGetOrSet } from "../../../shared/cache/index.js"
+import { CACHE_TTL } from "../../../shared/config/cache.config.js"
+import { productSearchKey, type ProductSearchCacheInput } from "../../../shared/cache/cache.keys.js"
 
 function calculateEffectivePrice(basePrice: any, discountPrice: any): number {
   const base = typeof basePrice === "number" ? basePrice : parseFloat(String(basePrice))
@@ -56,9 +59,11 @@ function mapSortField(sort: string): string {
   return sortMapping[sort] || "createdAt"
 }
 
-export async function searchProducts(
-  input: SearchProductsInput
-): Promise<SearchResponseDTO> {
+/**
+ * Execute database query for search
+ * This function is called on cache miss
+ */
+async function executeSearchQuery(input: SearchProductsInput): Promise<SearchResponseDTO> {
   const { q, page, limit, sort, order, category, seller, minPrice, maxPrice, inStock } = input
 
   const skip = (page - 1) * limit
@@ -153,4 +158,20 @@ export async function searchProducts(
       order
     }
   }
+}
+
+export async function searchProducts(
+  input: SearchProductsInput
+): Promise<SearchResponseDTO> {
+  // Generate cache key from search parameters
+  const cacheKey = productSearchKey(input as ProductSearchCacheInput)
+
+  // Cache-aside pattern: get from cache or fetch from DB
+  const cached = await cacheGetOrSet<SearchResponseDTO>(
+    cacheKey,
+    CACHE_TTL.SEARCH_RESULT,
+    () => executeSearchQuery(input)
+  )
+
+  return cached.data!
 }
