@@ -169,3 +169,52 @@ model CartItem {
   @@index([cartId])
   @@index([productId])
 }
+
+// ============================================================
+// Order Aggregate (Phase 4 Step 6)
+// Order is a HISTORICAL RECORD - no relation to Product
+// Creation: When user converts Checkout Preview to Order Draft
+// ============================================================
+
+model Order {
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  status         OrderStatus @default(DRAFT)
+  
+  // Snapshot totals
+  totalQuantity  Int         @default(0)   // SUM of all item quantities
+  totalItemCount Int         @default(0)   // COUNT of distinct items
+  subtotal       Decimal     @default(0)   // SUM of all subtotals
+  
+  // Timestamps
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  // Relations
+  items          OrderItem[]
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id           Int      @id @default(autoincrement())
+  orderId      Int
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  // ===== PURE SNAPSHOT - NO RELATION TO PRODUCT =====
+  productId    Int      // Historical reference only
+  productName  String   // Snapshot at time of order
+  unitPrice    Decimal  // Snapshot at time of order
+  quantity     Int
+  subtotal     Decimal  // quantity * unitPrice
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  DRAFT
+  // Future: PENDING_PAYMENT, PAID, CONFIRMED, SHIPPING, SHIPPED, COMPLETED, CANCELLED
+}

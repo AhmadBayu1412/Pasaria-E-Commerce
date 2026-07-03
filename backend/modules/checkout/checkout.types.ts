@@ -1,6 +1,7 @@
 // ============================================================
 // CHECKOUT DOMAIN TYPES
 // Phase 4 Step 5: Checkout Orchestration Foundation
+// Phase 4 Step 6: Expanded Preview with Product Snapshot
 //
 // Philosophy:
 // - Application Service contract (not Domain Service)
@@ -19,6 +20,8 @@ export interface CheckoutPreview {
     readonly cartId: number | null
     readonly userId: number
     readonly totalQuantity: number
+    readonly totalItemCount: number    // NEW: Count of distinct items
+    readonly subtotal: number         // NEW: Total amount (as number for JSON)
     readonly isReady: boolean
   }
 
@@ -32,8 +35,11 @@ export interface CheckoutPreview {
 
 export interface CheckoutItemPreview {
   readonly productId: number
+  readonly productName: string         // NEW: From Product
+  readonly unitPrice: number         // NEW: From Product (as number)
   readonly quantity: number
   readonly availableStock: number
+  readonly subtotal: number          // NEW: quantity * unitPrice
   readonly status: "VALID" | "INVALID"
   readonly reason?: "PRODUCT_NOT_FOUND" | "OUT_OF_STOCK"
 }

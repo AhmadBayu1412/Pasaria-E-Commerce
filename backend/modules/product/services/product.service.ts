@@ -333,3 +333,47 @@ export async function deleteProduct(
         [CacheKey.productsList, CacheKey.productDetail(id)]
     )
 }
+
+// ============================================================
+// CHECKOUT SNAPSHOT (Phase 4 Step 6)
+// ============================================================
+
+import { BusinessError } from "../../../shared/errors/business.error.js"
+import type { Decimal } from "@prisma/client/runtime/library"
+
+export interface ProductSnapshot {
+  readonly id: number
+  readonly name: string
+  readonly basePrice: Decimal
+}
+
+/**
+ * Get Product Info for Checkout Snapshot
+ * 
+ * Returns minimal product data needed for Order snapshot.
+ * Does NOT return full product entity.
+ * 
+ * @param productId - Product ID
+ * @returns Product snapshot data
+ * @throws BusinessError PRODUCT_NOT_FOUND
+ */
+export async function getProductForSnapshot(productId: number): Promise<ProductSnapshot> {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      basePrice: true,
+    },
+  })
+
+  if (!product) {
+    throw new BusinessError("Product not found", 404, "PRODUCT_NOT_FOUND")
+  }
+
+  return {
+    id: product.id,
+    name: product.name,
+    basePrice: product.basePrice,
+  }
+}
