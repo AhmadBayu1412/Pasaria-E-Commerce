@@ -5,62 +5,63 @@
 // ============================================================
 // PHASE 4 - Step 3: Cart Management
 // Updated: Added new service types and unified response types
+// PHASE 4 - Step 7: Added Transaction types for clearCartTx
 // ============================================================
 
 import type { Prisma } from "@prisma/client"
 
 // --------------- Aggregate Root -------------------
 export interface Cart {
-  readonly id: number
-  readonly userId: number
-  readonly items: CartItem[]
-  readonly createdAt: Date
-  readonly updatedAt: Date
+  readonly id: number;
+  readonly userId: number;
+  readonly items: CartItem[];
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 // --------------- Child Entity -------------------
 export interface CartItem {
-  readonly id: number
-  readonly cartId: number
-  readonly productId: number
-  readonly quantity: number
-  readonly createdAt: Date
-  readonly updatedAt: Date
+  readonly id: number;
+  readonly cartId: number;
+  readonly productId: number;
+  readonly quantity: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 // --------------- Prisma Payload Types -------------------
 export type CartWithItems = Prisma.CartGetPayload<{
   include: { items: true }
-}>
+}>;
 
 export type CartItemWithProduct = Prisma.CartItemGetPayload<{
   include: { product: true }
-}>
+}>;
 
 // --------------- Service Input Types -------------------
 export interface AddToCartServiceInput {
-  readonly userId: number
-  readonly productId: number
-  readonly quantity?: number  // default 1
+  readonly userId: number;
+  readonly productId: number;
+  readonly quantity?: number; // default 1
 }
 
 export interface GetCartServiceInput {
-  readonly userId: number
+  readonly userId: number;
 }
 
 export interface UpdateQuantityServiceInput {
-  readonly userId: number
-  readonly productId: number
-  readonly quantity: number  // ABSOLUTE value, not increment
+  readonly userId: number;
+  readonly productId: number;
+  readonly quantity: number; // ABSOLUTE value, not increment
 }
 
 export interface RemoveItemServiceInput {
-  readonly userId: number
-  readonly productId: number
+  readonly userId: number;
+  readonly productId: number;
 }
 
 export interface ClearCartServiceInput {
-  readonly userId: number
+  readonly userId: number;
 }
 
 // --------------- Unified Cart View (Step 3) -------------------
@@ -73,21 +74,21 @@ export interface ClearCartServiceInput {
  * Controller never needs to branch on "exists" - always returns CartView.
  */
 export interface CartItemView {
-  readonly id: number
-  readonly productId: number
-  readonly quantity: number
-  readonly createdAt: string
-  readonly updatedAt: string
+  readonly id: number;
+  readonly productId: number;
+  readonly quantity: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 export interface CartView {
-  readonly cartId: number | null       // null if cart hasn't been created yet
-  readonly userId: number
-  readonly items: CartItemView[]
-  readonly itemCount: number           // items.length (jumlah jenis produk)
-  readonly totalQuantity: number       // sum of all item quantities
-  readonly createdAt: string | null    // null if cart hasn't been created yet
-  readonly updatedAt: string | null    // null if cart hasn't been created yet
+  readonly cartId: number | null; // null if cart hasn't been created yet
+  readonly userId: number;
+  readonly items: CartItemView[];
+  readonly itemCount: number; // items.length (jumlah jenis produk)
+  readonly totalQuantity: number; // sum of all item quantities
+  readonly createdAt: string | null; // null if cart hasn't been created yet
+  readonly updatedAt: string | null; // null if cart hasn't been created yet
 }
 
 // --------------- Service Output Types -------------------
@@ -97,32 +98,32 @@ export interface CartView {
  * Contains metadata used for logging/debugging only
  */
 interface AddToCartInternalResult {
-  readonly cart: CartWithItems
-  readonly itemCount: number      // items.length - jumlah jenis produk
-  readonly totalQuantity: number // sum of all item quantities
+  readonly cart: CartWithItems;
+  readonly itemCount: number; // items.length - jumlah jenis produk
+  readonly totalQuantity: number; // sum of all item quantities
   readonly _meta: {
-    readonly action: "CREATED" | "INCREMENTED"  // Internal use only
-  }
+    readonly action: "CREATED" | "INCREMENTED"; // Internal use only
+  };
 }
 
 // Export for internal service use
-export type { AddToCartInternalResult as AddToCartResult }
+export type { AddToCartInternalResult as AddToCartResult };
 
 /**
  * GetCartResult - Always returns CartView
  * Never branches - Controller gets consistent shape
  */
-export type GetCartResult = CartView
+export type GetCartResult = CartView;
 
 /**
  * Result for updateQuantity operation
  */
 export interface UpdateQuantityResult {
-  readonly cart: CartWithItems
-  readonly previousQuantity: number
-  readonly newQuantity: number
-  readonly itemCount: number
-  readonly totalQuantity: number
+  readonly cart: CartWithItems;
+  readonly previousQuantity: number;
+  readonly newQuantity: number;
+  readonly itemCount: number;
+  readonly totalQuantity: number;
 }
 
 /**
@@ -130,10 +131,10 @@ export interface UpdateQuantityResult {
  * Note: Cart still exists, items may be empty
  */
 export interface RemoveItemResult {
-  readonly cart: CartWithItems
-  readonly removedProductId: number
-  readonly itemCount: number
-  readonly totalQuantity: number
+  readonly cart: CartWithItems;
+  readonly removedProductId: number;
+  readonly itemCount: number;
+  readonly totalQuantity: number;
 }
 
 /**
@@ -141,14 +142,34 @@ export interface RemoveItemResult {
  * Note: Cart still exists with empty items
  */
 export interface ClearCartResult {
-  readonly cart: CartWithItems
-  readonly itemsRemoved: number
+  readonly cart: CartWithItems;
+  readonly itemsRemoved: number;
+}
+
+// ============================================================
+// STEP 7: TRANSACTION TYPES
+// ============================================================
+
+/**
+ * Clear Cart Input — Inside Transaction
+ */
+export interface ClearCartTxInput {
+  readonly userId: number;
+  readonly cartId: number;
+}
+
+/**
+ * Clear Cart Result — Inside Transaction
+ */
+export interface ClearCartTxResult {
+  readonly itemsRemoved: number;
+  readonly cartId: number;
 }
 
 // --------------- Computed Types -------------------
 export interface CartComputedFields {
-  readonly itemCount: number      // items.length - jumlah jenis produk
-  readonly totalQuantity: number // items.reduce((sum, i) => sum + i.quantity, 0)
+  readonly itemCount: number; // items.length - jumlah jenis produk
+  readonly totalQuantity: number; // items.reduce((sum, i) => sum + i.quantity, 0)
 }
 
 // --------------- Aggregate Invariants (Complete - Step 3) -------------------
@@ -167,5 +188,5 @@ export const CART_INVARIANTS = {
   MAX_QUANTITY: 99,
   QUANTITY_MUST_BE_POSITIVE: (qty: number) => qty >= 1,
   QUANTITY_WITHIN_LIMIT: (qty: number) => qty >= 1 && qty <= 99,
-  QUANTITY_NEVER_ZERO: (qty: number) => qty > 0,  // I2
-} as const
+  QUANTITY_NEVER_ZERO: (qty: number) => qty > 0, // I2
+} as const;

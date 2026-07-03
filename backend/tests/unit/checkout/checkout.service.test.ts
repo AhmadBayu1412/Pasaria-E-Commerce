@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CheckoutService } from "../../../modules/checkout/checkout.service"
 import { BusinessError } from "../../../shared/errors/business.error"
+import type { ProductSnapshot } from "../../../modules/product/services/product.service"
 
 // Mock dependencies
 vi.mock("../../../modules/cart/services/cart.service", () => ({
@@ -28,6 +29,13 @@ vi.mock("../../../modules/product/services/product.service", () => ({
 import { CartService } from "../../../modules/cart/services/cart.service"
 import { InventoryService } from "../../../modules/inventory/inventory.service"
 import { getProductForSnapshot } from "../../../modules/product/services/product.service"
+
+// Helper to create ProductSnapshot with proper types
+const createProductSnapshot = (id: number, name: string, basePrice: number): ProductSnapshot => ({
+  id,
+  name,
+  basePrice: basePrice as any, // Cast number to Decimal for test mocks
+})
 
 describe("CheckoutService", () => {
   beforeEach(() => {
@@ -55,8 +63,8 @@ describe("CheckoutService", () => {
       ]
 
       const mockProducts = [
-        { id: 1, name: "Laptop", basePrice: 10000000 },
-        { id: 2, name: "Mouse", basePrice: 500000 },
+        createProductSnapshot(1, "Laptop", 10000000),
+        createProductSnapshot(2, "Mouse", 500000),
       ]
 
       vi.mocked(CartService.getCartSnapshot).mockResolvedValue(mockCartSnapshot)
@@ -106,37 +114,6 @@ describe("CheckoutService", () => {
 
     it("should throw CHECKOUT_UNAVAILABLE_ITEMS when one item is out of stock", async () => {
       // Arrange
-      const mockCartSnapshot = {
-        cartId: 10,
-        userId: mockUserId,
-        items: [
-          { productId: 1, quantity: 2 },
-          { productId: 2, quantity: 1 },
-        ],
-        totalQuantity: 3,
-      }
-
-      vi.mocked(CartService.getCartSnapshot).mockResolvedValue(mockCartSnapshot)
-      vi.mocked(InventoryService.validateCartItemForCheckout).mockResolvedValue({
-        productId: 1,
-        requestedQuantity: 2,
-        availableStock: 10,
-        status: "VALID" as const,
-        reason: undefined,
-      })
-      vi.mocked(getProductForSnapshot).mockResolvedValue({
-        id: 1,
-        name: "Laptop",
-        basePrice: 10000000,
-      })
-
-      // Act & Assert - When second item inventory check returns OUT_OF_STOCK
-      // But we only mock for one item... let me check actual flow
-      
-      // Since we mock inventory to return VALID for all, this test case needs adjustment
-      // Let's test the actual scenario where inventory says OUT_OF_STOCK
-      vi.clearAllMocks()
-      
       vi.mocked(CartService.getCartSnapshot).mockResolvedValue({
         cartId: 10,
         userId: mockUserId,
@@ -150,11 +127,9 @@ describe("CheckoutService", () => {
         status: "INVALID" as const,
         reason: "OUT_OF_STOCK" as const,
       })
-      vi.mocked(getProductForSnapshot).mockResolvedValue({
-        id: 2,
-        name: "OutOfStock Item",
-        basePrice: 500000,
-      })
+      vi.mocked(getProductForSnapshot).mockResolvedValue(
+        createProductSnapshot(2, "OutOfStock Item", 500000)
+      )
 
       // Act & Assert
       await expect(CheckoutService.initiateCheckout({ userId: mockUserId }))
@@ -180,21 +155,19 @@ describe("CheckoutService", () => {
         new BusinessError("Product not found", 404, "PRODUCT_NOT_FOUND")
       )
 
-      // Act & Assert - ProductService error propagates
+      // Act & Assert
       await expect(CheckoutService.initiateCheckout({ userId: mockUserId }))
         .rejects.toThrow(BusinessError)
     })
 
     it("should call CartService.getCartSnapshot exactly once", async () => {
       // Arrange
-      const mockCartSnapshot = {
+      vi.mocked(CartService.getCartSnapshot).mockResolvedValue({
         cartId: 10,
         userId: mockUserId,
         items: [{ productId: 1, quantity: 1 }],
         totalQuantity: 1,
-      }
-
-      vi.mocked(CartService.getCartSnapshot).mockResolvedValue(mockCartSnapshot)
+      })
       vi.mocked(InventoryService.validateCartItemForCheckout).mockResolvedValue({
         productId: 1,
         requestedQuantity: 1,
@@ -202,11 +175,9 @@ describe("CheckoutService", () => {
         status: "VALID" as const,
         reason: undefined,
       })
-      vi.mocked(getProductForSnapshot).mockResolvedValue({
-        id: 1,
-        name: "Laptop",
-        basePrice: 10000000,
-      })
+      vi.mocked(getProductForSnapshot).mockResolvedValue(
+        createProductSnapshot(1, "Laptop", 10000000)
+      )
 
       // Act
       await CheckoutService.initiateCheckout({ userId: mockUserId })
@@ -218,7 +189,7 @@ describe("CheckoutService", () => {
 
     it("should call InventoryService.validateCartItemForCheckout for each cart item", async () => {
       // Arrange
-      const mockCartSnapshot = {
+      vi.mocked(CartService.getCartSnapshot).mockResolvedValue({
         cartId: 10,
         userId: mockUserId,
         items: [
@@ -227,9 +198,7 @@ describe("CheckoutService", () => {
           { productId: 3, quantity: 1 },
         ],
         totalQuantity: 6,
-      }
-
-      vi.mocked(CartService.getCartSnapshot).mockResolvedValue(mockCartSnapshot)
+      })
       vi.mocked(InventoryService.validateCartItemForCheckout).mockResolvedValue({
         productId: 1,
         requestedQuantity: 1,
@@ -237,11 +206,9 @@ describe("CheckoutService", () => {
         status: "VALID" as const,
         reason: undefined,
       })
-      vi.mocked(getProductForSnapshot).mockResolvedValue({
-        id: 1,
-        name: "Product",
-        basePrice: 1000,
-      })
+      vi.mocked(getProductForSnapshot).mockResolvedValue(
+        createProductSnapshot(1, "Product", 1000)
+      )
 
       // Act
       await CheckoutService.initiateCheckout({ userId: mockUserId })

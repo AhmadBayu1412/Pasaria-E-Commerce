@@ -2,6 +2,7 @@
 // CART SERVICE - Domain Behavior Implementation
 // Phase 4 Step 2: Add To Cart
 // Phase 4 Step 3: Cart Management (Get, Update, Remove, Clear)
+// Phase 4 Step 7: Add clearCartTx() for atomic transactions
 //
 // Responsible for:
 // - Lazy Cart creation
@@ -23,6 +24,7 @@
 import { prisma } from "../../../infra/db/prisma.js"
 import { CartRules } from "../rules/cart.rules.js"
 import { BusinessError } from "../../../shared/errors/business.error.js"
+import type { Prisma } from "@prisma/client"
 import type {
   AddToCartServiceInput,
   AddToCartResult,
@@ -37,6 +39,8 @@ import type {
   RemoveItemResult,
   ClearCartServiceInput,
   ClearCartResult,
+  ClearCartTxInput,
+  ClearCartTxResult,
 } from "../types/cart.types.js"
 
 // ----- Service Implementation -----
@@ -417,6 +421,52 @@ export const CartService = {
       totalQuantity: cart.items.reduce((sum, i) => sum + i.quantity, 0),
     }
   },
+
+  // ============================================================
+  // STEP 7: CLEAR CART FOR TRANSACTION
+  // ============================================================
+
+  /**
+   * Clear Cart — Inside Transaction
+   *
+   * Deletes all CartItems from the cart within an existing transaction.
+   * Used by CheckoutService.completeCheckout() for atomic operations.
+   *
+   * @param tx - Prisma.TransactionClient (REQUIRED)
+   * @param input - ClearCartTxInput with userId + cartId
+   * @returns ClearCartTxResult with itemsRemoved and cartId
+   *
+   * NOTE: Does NOT validate cart existence - assumes caller has validated
+   */
+  async clearCartTx(
+    tx: Prisma.TransactionClient,
+    input: ClearCartTxInput
+  ): Promise<ClearCartTxResult> {
+    const { userId, cartId } = input
+
+    // Get cart to count items
+    const cart = await tx.cart.findUnique({
+      where: { id: cartId },
+      include: { items: true },
+    })
+
+    if (!cart) {
+      throw new BusinessError("Cart not found", 404, "CART_NOT_FOUND")
+    }
+
+    // Count items before deletion
+    const itemsRemoved = cart.items.length
+
+    // Delete all items (NOT cart - cart persists)
+    await tx.cartItem.deleteMany({
+      where: { cartId: cart.id },
+    })
+
+    return {
+      itemsRemoved,
+      cartId: cart.id,
+    }
+  },
 } as const
 
 /**
@@ -425,13 +475,13 @@ export const CartService = {
  * Used by Application Services (e.g., Checkout)
  */
 export interface CartSnapshot {
-  readonly cartId: number | null
-  readonly userId: number
+  readonly cartId: number | null;
+  readonly userId: number;
   readonly items: ReadonlyArray<{
-    readonly productId: number
-    readonly quantity: number
-  }>
-  readonly totalQuantity: number
+    readonly productId: number;
+    readonly quantity: number;
+  }>;
+  readonly totalQuantity: number;
 }
 
 // ----- Helper Functions -----
@@ -442,7 +492,7 @@ function buildCartResponse(cart: CartWithItems, action: "CREATED" | "INCREMENTED
     itemCount: cart.items.length,
     totalQuantity: cart.items.reduce((sum, item) => sum + item.quantity, 0),
     _meta: {
-      action,  // Internal use only - for logging/debugging
+      action, // Internal use only - for logging/debugging
     },
   }
 }

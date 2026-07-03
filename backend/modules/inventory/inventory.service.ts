@@ -1,21 +1,26 @@
 // ============================================================
 // INVENTORY SERVICE (Internal Use Only)
 // Phase 4 Step 4: Inventory Foundation
+// Phase 4 Step 7: Add reserveStockTx() for atomic transactions
 //
 // Philosophy:
 // - Throw on failure (consistent with Cart pattern)
 // - Returns product data for Step 5 (Checkout)
-// - No mutation - reserve/release comes in Step 5
+// - reserveStockTx: Domain operation, does NOT know about Order/Checkout
 // ============================================================
 
 import { prisma } from "../../infra/db/prisma.js"
 import { InventoryRules } from "./inventory.rules.js"
 import { BusinessError } from "../../shared/errors/business.error.js"
+import type { Prisma } from "@prisma/client"
 import type {
   ValidateStockInput,
   ValidateStockResult,
   ValidateCartItemForCheckoutInput,
   ValidateCartItemForCheckoutResult,
+  ReserveStockInput,
+  ReserveStockResult,
+  ReleaseStockInput,
 } from "./inventory.types.js"
 
 export const InventoryService = {
@@ -104,5 +109,122 @@ export const InventoryService = {
       status: "VALID",
       reason: undefined,
     }
+  },
+
+  // ============================================================
+  // STEP 7: RESERVE STOCK FOR TRANSACTION
+  // ============================================================
+
+  /**
+   * Reserve Stock — Inside Transaction
+   *
+   * Domain operation only. Does NOT know about Order, Checkout, or Payment.
+   * This is purely an inventory domain operation.
+   *
+   * Algorithm:
+   * 1. Check product exists
+   * 2. Validate sufficient stock
+   * 3. Decrement availableStock (atomic within transaction)
+   *
+   * @param tx - Prisma.TransactionClient (REQUIRED)
+   * @param input - ReserveStockInput with productId + quantity
+   * @returns ReserveStockResult
+   *
+   * @throws BusinessError PRODUCT_NOT_FOUND
+   * @throws BusinessError INSUFFICIENT_STOCK
+   */
+  async reserveStockTx(
+    tx: Prisma.TransactionClient,
+    input: ReserveStockInput
+  ): Promise<ReserveStockResult> {
+    const { productId, quantity } = input
+
+    // 1. Get product with current stock
+    const product = await tx.product.findUnique({
+      where: { id: productId },
+      select: { id: true, availableStock: true },
+    })
+
+    if (!product) {
+      throw new BusinessError("Product not found", 404, "PRODUCT_NOT_FOUND")
+    }
+
+    // 2. Validate sufficient stock
+    InventoryRules.assertStockAvailable(product.availableStock, quantity)
+
+    // 3. Decrement availableStock atomically
+    const updated = await tx.product.update({
+      where: { id: productId },
+      data: {
+        availableStock: {
+          decrement: quantity,
+        },
+      },
+      select: {
+        id: true,
+        availableStock: true,
+      },
+    })
+
+    return {
+      productId: updated.id,
+      reservedQuantity: quantity,
+      remainingStock: updated.availableStock,
+    }
+  },
+
+  /**
+   * Reserve Stock — Standalone (for testing)
+   *
+   * Uses global prisma client instead of transaction.
+   */
+  async reserveStock(input: ReserveStockInput): Promise<ReserveStockResult> {
+    const { productId, quantity } = input
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, availableStock: true },
+    })
+
+    if (!product) {
+      throw new BusinessError("Product not found", 404, "PRODUCT_NOT_FOUND")
+    }
+
+    InventoryRules.assertStockAvailable(product.availableStock, quantity)
+
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        availableStock: {
+          decrement: quantity,
+        },
+      },
+      select: {
+        id: true,
+        availableStock: true,
+      },
+    })
+
+    return {
+      productId: updated.id,
+      reservedQuantity: quantity,
+      remainingStock: updated.availableStock,
+    }
+  },
+
+  /**
+   * Release Stock — INTERFACE ONLY in Step 7
+   * Implementation deferred to Step 8
+   *
+   * @param tx - Prisma.TransactionClient (REQUIRED)
+   * @param input - ReleaseStockInput
+   * @throws Error "Not implemented in Step 7"
+   */
+  async releaseStockTx(
+    _tx: Prisma.TransactionClient,
+    _input: ReleaseStockInput
+  ): Promise<void> {
+    // TODO: Step 8 implementation
+    throw new Error("Not implemented in Step 7 - deferred to Step 8")
   },
 } as const

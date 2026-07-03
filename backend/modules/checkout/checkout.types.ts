@@ -2,6 +2,7 @@
 // CHECKOUT DOMAIN TYPES
 // Phase 4 Step 5: Checkout Orchestration Foundation
 // Phase 4 Step 6: Expanded Preview with Product Snapshot
+// Phase 4 Step 7: Complete Checkout Transaction
 //
 // Philosophy:
 // - Application Service contract (not Domain Service)
@@ -11,35 +12,79 @@
 
 // ----- Input Types -----
 export interface InitiateCheckoutInput {
-  readonly userId: number
+  readonly userId: number;
+}
+
+/**
+ * Input for complete checkout
+ * Minimal - uses existing CheckoutPreview from Step 6
+ */
+export interface CompleteCheckoutInput {
+  readonly userId: number;
 }
 
 // ----- Output: Checkout Preview (Nested Structure) -----
 export interface CheckoutPreview {
   readonly summary: {
-    readonly cartId: number | null
-    readonly userId: number
-    readonly totalQuantity: number
-    readonly totalItemCount: number    // NEW: Count of distinct items
-    readonly subtotal: number         // NEW: Total amount (as number for JSON)
-    readonly isReady: boolean
-  }
+    readonly cartId: number | null;
+    readonly userId: number;
+    readonly totalQuantity: number;
+    readonly totalItemCount: number;
+    readonly subtotal: number;
+    readonly isReady: boolean;
+  };
 
-  readonly items: ReadonlyArray<CheckoutItemPreview>
+  readonly items: ReadonlyArray<CheckoutItemPreview>;
 
   readonly validation: {
-    readonly passed: boolean
-    readonly failedItems: ReadonlyArray<number>
-  }
+    readonly passed: boolean;
+    readonly failedItems: ReadonlyArray<number>;
+  };
 }
 
 export interface CheckoutItemPreview {
-  readonly productId: number
-  readonly productName: string         // NEW: From Product
-  readonly unitPrice: number         // NEW: From Product (as number)
-  readonly quantity: number
-  readonly availableStock: number
-  readonly subtotal: number          // NEW: quantity * unitPrice
-  readonly status: "VALID" | "INVALID"
-  readonly reason?: "PRODUCT_NOT_FOUND" | "OUT_OF_STOCK"
+  readonly productId: number;
+  readonly productName: string;
+  readonly unitPrice: number;
+  readonly quantity: number;
+  readonly availableStock: number;
+  readonly subtotal: number;
+  readonly status: "VALID" | "INVALID";
+  readonly reason?: "PRODUCT_NOT_FOUND" | "OUT_OF_STOCK";
+}
+
+/**
+ * Result of complete checkout
+ * API-friendly - only data that makes sense for response
+ */
+export interface CompleteCheckoutResult {
+  readonly orderId: number;
+  readonly status: "DRAFT";
+  readonly totalQuantity: number;
+  readonly totalItemCount: number;
+  readonly subtotal: number;
+  readonly createdAt: Date;
+}
+
+/**
+ * Reserved inventory item (internal use)
+ */
+export interface ReservedItem {
+  readonly productId: number;
+  readonly quantity: number;
+  readonly reservedAt: Date;
+}
+
+/**
+ * Internal result from complete checkout transaction
+ */
+export interface CompleteCheckoutInternalResult {
+  readonly orderId: number;
+  readonly status: "DRAFT";
+  readonly totalQuantity: number;
+  readonly totalItemCount: number;
+  readonly subtotal: number;
+  readonly createdAt: Date;
+  readonly cartId: number | null;
+  readonly itemsRemoved: number;
 }
