@@ -1,6 +1,8 @@
 // ============================================================
 // CART MODULE INDEX
-// Phase 4 Step 1: Domain Foundation Only
+// Phase 4 Step 2: Add To Cart
+//
+// Exports all public interfaces from the Cart module
 // ============================================================
 
 // Types
@@ -13,4 +15,7 @@ export * from "./validation/cart.validation.js"
 // Rules
 export * from "./rules/cart.rules.js"
 
-// NOTE: Services, Controllers, Routes will be added in Step 2+
+// Services (Step 2)
+export * from "./services/cart.service.js"
+
+// NOTE: Routes are registered in app.ts, not exported from index

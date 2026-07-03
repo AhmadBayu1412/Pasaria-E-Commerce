@@ -1,6 +1,6 @@
 // ============================================================
 // CART RULES UNIT TESTS
-// Phase 4 Step 1
+// Phase 4 Step 2: Add To Cart
 // Tests database-independent rule logic only
 // ============================================================
 
@@ -14,37 +14,37 @@ describe("CartRules", () => {
   // Quantity Validation Tests
   // (These don't require database)
   // ============================================================
-  describe("assertQuantityValid", () => {
+  describe("assertQuantityWithinLimit", () => {
 
     it("should not throw for valid quantity (1)", () => {
-      expect(() => CartRules.assertQuantityValid(1)).not.toThrow()
+      expect(() => CartRules.assertQuantityWithinLimit(1)).not.toThrow()
     })
 
     it("should not throw for valid quantity (50)", () => {
-      expect(() => CartRules.assertQuantityValid(50)).not.toThrow()
+      expect(() => CartRules.assertQuantityWithinLimit(50)).not.toThrow()
     })
 
     it("should not throw for valid quantity (99)", () => {
-      expect(() => CartRules.assertQuantityValid(99)).not.toThrow()
+      expect(() => CartRules.assertQuantityWithinLimit(99)).not.toThrow()
     })
 
     it("should throw BusinessError for zero quantity", () => {
-      expect(() => CartRules.assertQuantityValid(0)).toThrow(BusinessError)
+      expect(() => CartRules.assertQuantityWithinLimit(0)).toThrow(BusinessError)
       try {
-        CartRules.assertQuantityValid(0)
+        CartRules.assertQuantityWithinLimit(0)
       } catch (e) {
         expect((e as BusinessError).code).toBe("INVALID_QUANTITY")
       }
     })
 
     it("should throw BusinessError for negative quantity", () => {
-      expect(() => CartRules.assertQuantityValid(-1)).toThrow(BusinessError)
+      expect(() => CartRules.assertQuantityWithinLimit(-1)).toThrow(BusinessError)
     })
 
     it("should throw BusinessError for quantity exceeding 99", () => {
-      expect(() => CartRules.assertQuantityValid(100)).toThrow(BusinessError)
+      expect(() => CartRules.assertQuantityWithinLimit(100)).toThrow(BusinessError)
       try {
-        CartRules.assertQuantityValid(100)
+        CartRules.assertQuantityWithinLimit(100)
       } catch (e) {
         expect((e as BusinessError).code).toBe("QUANTITY_EXCEEDS_LIMIT")
       }
@@ -52,14 +52,33 @@ describe("CartRules", () => {
 
     it("should throw BusinessError with correct status code", () => {
       try {
-        CartRules.assertQuantityValid(0)
+        CartRules.assertQuantityWithinLimit(0)
       } catch (e) {
         expect((e as BusinessError).statusCode).toBe(400)
       }
     })
 
     it("should throw BusinessError for very large quantity", () => {
-      expect(() => CartRules.assertQuantityValid(999999)).toThrow(BusinessError)
+      expect(() => CartRules.assertQuantityWithinLimit(999999)).toThrow(BusinessError)
+    })
+  })
+
+  describe("assertTotalQuantityWithinLimit", () => {
+
+    it("should not throw when total is within limit", () => {
+      expect(() => CartRules.assertTotalQuantityWithinLimit(50, 30)).not.toThrow()
+    })
+
+    it("should not throw when current + add = max", () => {
+      expect(() => CartRules.assertTotalQuantityWithinLimit(49, 50)).not.toThrow()
+    })
+
+    it("should throw when total exceeds limit", () => {
+      expect(() => CartRules.assertTotalQuantityWithinLimit(90, 20)).toThrow(BusinessError)
+    })
+
+    it("should throw when current already at max", () => {
+      expect(() => CartRules.assertTotalQuantityWithinLimit(99, 1)).toThrow(BusinessError)
     })
   })
 })

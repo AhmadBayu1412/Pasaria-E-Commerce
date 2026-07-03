@@ -34,6 +34,31 @@ export type CartItemWithProduct = Prisma.CartItemGetPayload<{
   include: { product: true }
 }>
 
+// --------------- Service Input Types -------------------
+export interface AddToCartServiceInput {
+  readonly userId: number
+  readonly productId: number
+  readonly quantity?: number  // default 1
+}
+
+// --------------- Service Output Types -------------------
+
+/**
+ * Internal result type for addToCart operation
+ * Contains metadata used for logging/debugging only
+ */
+interface AddToCartInternalResult {
+  readonly cart: CartWithItems
+  readonly itemCount: number      // items.length - jumlah jenis produk
+  readonly totalQuantity: number // sum of all item quantities
+  readonly _meta: {
+    readonly action: "CREATED" | "INCREMENTED"  // Internal use only
+  }
+}
+
+// Export for internal service use
+export type { AddToCartInternalResult as AddToCartResult }
+
 // --------------- Computed Types -------------------
 export interface CartComputedFields {
   readonly itemCount: number      // items.length - jumlah jenis produk

@@ -4,11 +4,12 @@
 // API endpoints: Step 2
 // ============================================================
 
-// ----- Request DTOs (Step 2+) -----
-export interface AddToCartRequestDTO {
-  readonly productId: number
-  readonly quantity?: number  // default 1
-}
+// ----- Request DTOs -----
+// NOTE: AddToCartRequestDTO is similar to AddToCartServiceInput
+// but for API layer. Keeping separate for API contract clarity.
+
+// Re-export for convenience
+export type { AddToCartInput } from "../validation/cart.validation.js"
 
 export interface UpdateCartItemRequestDTO {
   readonly quantity: number

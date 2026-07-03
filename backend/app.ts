@@ -29,6 +29,9 @@ import { assertEnvironment } from "./infra/config/env.validation.js"
 // Phase 3 - Category
 import categoryRoutes from "./modules/category/index.js"
 
+// Phase 4 - Cart
+import cartRoutes from "./modules/cart/cart.routes.js"
+
 const app = express()
 const port = Number(process.env.PORT) || 3000
 
@@ -107,6 +110,9 @@ app.use("/products", productRoutes)
 
 // ... existing routes ...
 app.use("/categories", categoryRoutes)
+
+// Phase 4 - Cart
+app.use("/cart", cartRoutes)
 
 // ============ ERROR HANDLING ============
 app.use(notFound)
