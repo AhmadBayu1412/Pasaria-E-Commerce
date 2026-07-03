@@ -376,7 +376,63 @@ export const CartService = {
     })
     return cart as CartWithItems | null
   },
+
+  // ============================================================
+  // STEP 5: CART SNAPSHOT FOR APPLICATION SERVICE
+  // ============================================================
+
+  /**
+   * Get Cart Snapshot — Application Service Use
+   *
+   * Returns structured contract that Application Services can consume
+   * without knowing internal Cart entity structure.
+   *
+   * Key Principles:
+   * - Cart computes its own fields (totalQuantity)
+   * - Application Service only reads, never computes
+   * - No internal entity exposed outside domain
+   */
+  async getCartSnapshot(userId: number): Promise<CartSnapshot> {
+    const cart = await prisma.cart.findUnique({
+      where: { userId },
+      include: { items: true },
+    })
+
+    if (!cart) {
+      return {
+        cartId: null,
+        userId,
+        items: [],
+        totalQuantity: 0,
+      }
+    }
+
+    return {
+      cartId: cart.id,
+      userId: cart.userId,
+      items: cart.items.map(i => ({
+        productId: i.productId,
+        quantity: i.quantity,
+      })),
+      totalQuantity: cart.items.reduce((sum, i) => sum + i.quantity, 0),
+    }
+  },
 } as const
+
+/**
+ * Cart Snapshot Contract
+ * Stable interface for cross-boundary communication
+ * Used by Application Services (e.g., Checkout)
+ */
+export interface CartSnapshot {
+  readonly cartId: number | null
+  readonly userId: number
+  readonly items: ReadonlyArray<{
+    readonly productId: number
+    readonly quantity: number
+  }>
+  readonly totalQuantity: number
+}
 
 // ----- Helper Functions -----
 

@@ -32,6 +32,9 @@ import categoryRoutes from "./modules/category/index.js"
 // Phase 4 - Cart
 import cartRoutes from "./modules/cart/cart.routes.js"
 
+// Phase 4 - Step 5: Checkout
+import checkoutRoutes from "./modules/checkout/checkout.routes.js"
+
 const app = express()
 const port = Number(process.env.PORT) || 3000
 
@@ -113,6 +116,9 @@ app.use("/categories", categoryRoutes)
 
 // Phase 4 - Cart
 app.use("/cart", cartRoutes)
+
+// Phase 4 - Step 5: Checkout
+app.use("/checkout", checkoutRoutes)
 
 // ============ ERROR HANDLING ============
 app.use(notFound)
