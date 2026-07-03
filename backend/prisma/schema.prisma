@@ -59,6 +59,13 @@ model Product {
   // ===== Product Pricing (Phase 3 Step 6) =====
   basePrice       Decimal  @default(0)  // Required, > 0
   discountPrice   Decimal?             // Optional, >= 0, <= basePrice
+
+// ============================================================
+// CartItem Relation (Phase 4 Step 1)
+// Product dapat muncul di banyak CartItem
+// NOTE: Tidak ada onDelete - agar tidak bisa hapus product yang masih di cart
+// ============================================================
+  cartItems       CartItem[]
 }
  
  // ===== PRODUCTIMGAE MODEL =====
@@ -118,4 +125,47 @@ model User {
 // Relasi Ownership - satu user bisa punya banyak product (Phase 2 Step 1)
 // ============================================================
   products      Product[]
+
+// ============================================================
+// Cart Relation - satu user punya satu cart (Phase 4 Step 1)
+// LAZY: Cart dibuat saat Add-To-Cart pertama kali
+// ============================================================
+  cart          Cart?
+}
+
+// ============================================================
+// Cart MODEL (Phase 4 Step 1)
+// Aggregate Root for Shopping Session
+// Creation Strategy: LAZY (dibuat saat Add-To-Cart pertama kali)
+// ============================================================
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique          // Exactly ONE Cart per User
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+// ============================================================
+// CartItem MODEL (Phase 4 Step 1)
+// Child Entity of Cart Aggregate
+// Represents a product in the cart with quantity
+// ============================================================
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])  // Inverse relation to Product.cartItems
+  quantity  Int      @default(1)     // Invariant: >= 1
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Invariant: Satu Product hanya muncul sekali per Cart
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
 }
