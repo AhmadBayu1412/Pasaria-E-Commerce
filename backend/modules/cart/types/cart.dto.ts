@@ -1,7 +1,10 @@
 // ============================================================
 // CART DTOs (Data Transfer Objects)
 // Step 1: Schema definition only
-// API endpoints: Step 2
+// Step 2: Add To Cart endpoint
+// Step 3: Cart Management endpoints (Get, Update, Remove, Clear)
+// ============================================================
+// PHASE 4 - Step 3: Cart Management
 // ============================================================
 
 // ----- Request DTOs -----
@@ -56,6 +59,24 @@ export interface CartMutationResponseDTO {
   readonly success: true
   readonly data: CartResponseDTO
   readonly message: string
+}
+
+// ----- Get Cart Response (Step 3) -----
+/**
+ * GET /cart always returns this shape
+ * Even when cart doesn't exist (lazy creation)
+ */
+export interface GetCartResponseDTO {
+  readonly success: true
+  readonly data: {
+    readonly cartId: number | null
+    readonly userId: number
+    readonly items: CartItemResponseDTO[]
+    readonly itemCount: number
+    readonly totalQuantity: number
+    readonly createdAt: string | null
+    readonly updatedAt: string | null
+  }
 }
 
 // ----- Error Response -----

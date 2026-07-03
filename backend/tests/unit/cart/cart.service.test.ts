@@ -1,10 +1,11 @@
 // ============================================================
 // CART SERVICE UNIT TESTS
 // Phase 4 Step 2: Add To Cart
+// Phase 4 Step 3: Cart Management
 //
-// Tests for CartService.addToCart behavior
-// Note: These tests use simplified mocks for unit testing
-// Integration tests use real database
+// Tests for CartService behavior
+// ============================================================
+// PHASE 4 - Step 3: Cart Management
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
@@ -16,7 +17,7 @@ vi.mock("../../../infra/db/prisma.js", () => {
   const mockTx = {
     product: { findUnique: vi.fn() },
     cart: { findUnique: vi.fn(), create: vi.fn() },
-    cartItem: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
+    cartItem: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
   }
 
   return {
@@ -35,8 +36,12 @@ import { CartService } from "../../../modules/cart/services/cart.service.js"
 
 describe("CartService", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
+
+  // ============================================================
+  // STEP 2: ADD TO CART TESTS
+  // ============================================================
 
   describe("addToCart", () => {
 
@@ -220,7 +225,492 @@ describe("CartService", () => {
     })
   })
 
-  describe("getCartByUserId", () => {
+  // ============================================================
+  // STEP 3: GET CART TESTS
+  // ============================================================
+
+  describe("getCart", () => {
+
+    it("should return CartView when cart exists", async () => {
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [
+          { id: 1, cartId: 1, productId: 1, quantity: 2, createdAt: new Date(), updatedAt: new Date() },
+          { id: 2, cartId: 1, productId: 2, quantity: 3, createdAt: new Date(), updatedAt: new Date() },
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockCart)
+
+      const result = await CartService.getCart({ userId: 100 })
+
+      expect(result.cartId).toBe(1)
+      expect(result.userId).toBe(100)
+      expect(result.items).toHaveLength(2)
+      expect(result.itemCount).toBe(2)
+      expect(result.totalQuantity).toBe(5)
+      expect(result.createdAt).not.toBeNull()
+      expect(result.updatedAt).not.toBeNull()
+    })
+
+    it("should return empty CartView when cart does not exist", async () => {
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+
+      const result = await CartService.getCart({ userId: 100 })
+
+      expect(result.cartId).toBeNull()
+      expect(result.userId).toBe(100)
+      expect(result.items).toHaveLength(0)
+      expect(result.itemCount).toBe(0)
+      expect(result.totalQuantity).toBe(0)
+      expect(result.createdAt).toBeNull()
+      expect(result.updatedAt).toBeNull()
+    })
+  })
+
+  // ============================================================
+  // STEP 3: UPDATE QUANTITY TESTS
+  // ============================================================
+
+  describe("updateQuantity", () => {
+
+    describe("Valid Operations", () => {
+
+      it("should update quantity successfully", async () => {
+        const existingItem = {
+          id: 1,
+          cartId: 1,
+          productId: 1,
+          quantity: 2,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        const mockCart = {
+          id: 1,
+          userId: 100,
+          items: [existingItem],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+        const updatedItem = { ...existingItem, quantity: 5 }
+        const mockUpdatedCart = { ...mockCart, items: [updatedItem] }
+
+        // First call: assertCartExistsForUser
+        ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+          .mockResolvedValueOnce(mockCart)  // For assertCartExistsForUser
+          .mockResolvedValueOnce(mockCart)  // Inside transaction - get cart
+          .mockResolvedValueOnce(mockUpdatedCart)  // Fetch updated cart
+
+        const result = await CartService.updateQuantity({
+          userId: 100,
+          productId: 1,
+          quantity: 5,
+        })
+
+        expect(result.previousQuantity).toBe(2)
+        expect(result.newQuantity).toBe(5)
+        expect(prisma.cartItem.update).toHaveBeenCalledWith({
+          where: { id: 1 },
+          data: { quantity: 5 },
+        })
+      })
+
+      it("should be idempotent when setting same quantity", async () => {
+        const existingItem = {
+          id: 1,
+          cartId: 1,
+          productId: 1,
+          quantity: 5,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        const mockCart = {
+          id: 1,
+          userId: 100,
+          items: [existingItem],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+          .mockResolvedValueOnce(mockCart)
+          .mockResolvedValueOnce(mockCart)
+          .mockResolvedValueOnce(mockCart)
+
+        const result = await CartService.updateQuantity({
+          userId: 100,
+          productId: 1,
+          quantity: 5,
+        })
+
+        expect(result.previousQuantity).toBe(5)
+        expect(result.newQuantity).toBe(5)
+      })
+
+      it("should throw error when cart does not exist", async () => {
+        ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+
+        await expect(
+          CartService.updateQuantity({
+            userId: 100,
+            productId: 1,
+            quantity: 5,
+          })
+        ).rejects.toThrow(BusinessError)
+
+        await expect(
+          CartService.updateQuantity({
+            userId: 100,
+            productId: 1,
+            quantity: 5,
+          })
+        ).rejects.toMatchObject({
+          code: "CART_NOT_FOUND",
+          statusCode: 404,
+        })
+      })
+
+      it("should throw error when item does not exist", async () => {
+        const mockCart = {
+          id: 1,
+          userId: 100,
+          items: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        // Setup mocks with extra returns to handle all possible calls
+        ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+          .mockResolvedValueOnce(mockCart)  // assertCartExistsForUser
+          .mockResolvedValueOnce(mockCart)  // get cart in tx
+          .mockResolvedValueOnce(mockCart)  // fetch updated cart
+          .mockResolvedValue(mockCart)  // fallback for any extra calls
+
+        await expect(
+          CartService.updateQuantity({
+            userId: 100,
+            productId: 999,
+            quantity: 5,
+          })
+        ).rejects.toMatchObject({
+          code: "CART_ITEM_NOT_FOUND",
+          statusCode: 404,
+        })
+      })
+
+      it("should throw error when quantity exceeds limit", async () => {
+        const existingItem = {
+          id: 1,
+          cartId: 1,
+          productId: 1,
+          quantity: 2,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        const mockCart = {
+          id: 1,
+          userId: 100,
+          items: [existingItem],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        // Setup mocks with extra returns
+        ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+          .mockResolvedValueOnce(mockCart)  // assertCartExistsForUser
+          .mockResolvedValueOnce(mockCart)  // get cart in tx
+          .mockResolvedValueOnce(mockCart)  // fetch updated cart
+          .mockResolvedValue(mockCart)  // fallback
+
+        await expect(
+          CartService.updateQuantity({
+            userId: 100,
+            productId: 1,
+            quantity: 100,
+          })
+        ).rejects.toMatchObject({
+          code: "QUANTITY_EXCEEDS_LIMIT",
+          statusCode: 400,
+        })
+      })
+
+      it("should throw error when quantity is zero", async () => {
+        const existingItem = {
+          id: 1,
+          cartId: 1,
+          productId: 1,
+          quantity: 2,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        const mockCart = {
+          id: 1,
+          userId: 100,
+          items: [existingItem],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        // Setup mocks with extra returns
+        ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+          .mockResolvedValueOnce(mockCart)  // assertCartExistsForUser
+          .mockResolvedValueOnce(mockCart)  // get cart in tx
+          .mockResolvedValueOnce(mockCart)  // fetch updated cart
+          .mockResolvedValue(mockCart)  // fallback
+
+        await expect(
+          CartService.updateQuantity({
+            userId: 100,
+            productId: 1,
+            quantity: 0,
+          })
+        ).rejects.toMatchObject({
+          code: "INVALID_QUANTITY_ZERO",
+          statusCode: 400,
+        })
+      })
+    })
+  })
+
+  // ============================================================
+  // STEP 3: REMOVE ITEM TESTS
+  // ============================================================
+
+  describe("removeItem", () => {
+
+    it("should remove item successfully", async () => {
+      const existingItem = {
+        id: 1,
+        cartId: 1,
+        productId: 1,
+        quantity: 2,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [existingItem],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const mockUpdatedCart = {
+        id: 1,
+        userId: 100,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockUpdatedCart)
+
+      const result = await CartService.removeItem({
+        userId: 100,
+        productId: 1,
+      })
+
+      expect(result.removedProductId).toBe(1)
+      expect(result.itemCount).toBe(0)
+      expect(prisma.cartItem.delete).toHaveBeenCalledWith({
+        where: { id: 1 },
+      })
+    })
+
+    it("should throw error when cart does not exist", async () => {
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+
+      await expect(
+        CartService.removeItem({
+          userId: 100,
+          productId: 1,
+        })
+      ).rejects.toMatchObject({
+        code: "CART_NOT_FOUND",
+        statusCode: 404,
+      })
+    })
+
+    it("should throw error when item does not exist", async () => {
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+
+      await expect(
+        CartService.removeItem({
+          userId: 100,
+          productId: 999,
+        })
+      ).rejects.toMatchObject({
+        code: "CART_ITEM_NOT_FOUND",
+        statusCode: 404,
+      })
+    })
+
+    it("should NOT delete cart, only item", async () => {
+      const existingItem = {
+        id: 1,
+        cartId: 1,
+        productId: 1,
+        quantity: 2,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [existingItem],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const mockUpdatedCart = {
+        id: 1,
+        userId: 100,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockUpdatedCart)
+
+      await CartService.removeItem({
+        userId: 100,
+        productId: 1,
+      })
+
+      // Verify cart was NOT deleted
+      expect(prisma.cartItem.delete).toHaveBeenCalled()
+    })
+  })
+
+  // ============================================================
+  // STEP 3: CLEAR CART TESTS
+  // ============================================================
+
+  describe("clearCart", () => {
+
+    it("should clear all items successfully", async () => {
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [
+          { id: 1, cartId: 1, productId: 1, quantity: 2, createdAt: new Date(), updatedAt: new Date() },
+          { id: 2, cartId: 1, productId: 2, quantity: 3, createdAt: new Date(), updatedAt: new Date() },
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const mockUpdatedCart = {
+        id: 1,
+        userId: 100,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockUpdatedCart)
+
+      const result = await CartService.clearCart({
+        userId: 100,
+      })
+
+      expect(result.itemsRemoved).toBe(2)
+      expect(result.cart.items).toHaveLength(0)
+      expect(prisma.cartItem.deleteMany).toHaveBeenCalledWith({
+        where: { cartId: 1 },
+      })
+    })
+
+    it("should throw error when cart does not exist", async () => {
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+
+      await expect(
+        CartService.clearCart({
+          userId: 100,
+        })
+      ).rejects.toMatchObject({
+        code: "CART_NOT_FOUND",
+        statusCode: 404,
+      })
+    })
+
+    it("should handle clearing empty cart gracefully", async () => {
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+
+      const result = await CartService.clearCart({
+        userId: 100,
+      })
+
+      expect(result.itemsRemoved).toBe(0)
+      expect(result.cart.items).toHaveLength(0)
+    })
+
+    it("should NOT delete cart, only items", async () => {
+      const mockCart = {
+        id: 1,
+        userId: 100,
+        items: [
+          { id: 1, cartId: 1, productId: 1, quantity: 2, createdAt: new Date(), updatedAt: new Date() },
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const mockUpdatedCart = {
+        id: 1,
+        userId: 100,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockCart)
+        .mockResolvedValueOnce(mockUpdatedCart)
+
+      await CartService.clearCart({
+        userId: 100,
+      })
+
+      // Verify cart was NOT deleted - only items were deleted
+      expect(prisma.cartItem.deleteMany).toHaveBeenCalled()
+    })
+  })
+
+  // ============================================================
+  // INTERNAL METHOD TEST
+  // ============================================================
+
+  describe("getCartByUserId (internal)", () => {
 
     it("should return null when cart does not exist", async () => {
       ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
@@ -234,7 +724,9 @@ describe("CartService", () => {
       const mockCart = {
         id: 1,
         userId: 100,
-        items: [{ id: 1, cartId: 1, productId: 1, quantity: 2 }],
+        items: [{ id: 1, cartId: 1, productId: 1, quantity: 2, createdAt: new Date(), updatedAt: new Date() }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       }
       ;(prisma.cart.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockCart)
 
@@ -246,6 +738,10 @@ describe("CartService", () => {
     })
   })
 })
+
+// ============================================================
+// CARTRULES UNIT TESTS
+// ============================================================
 
 describe("CartRules - Quantity Validation", () => {
 
@@ -269,6 +765,49 @@ describe("CartRules - Quantity Validation", () => {
 
     it("should throw for quantity exceeding 99", () => {
       expect(() => CartRules.assertQuantityWithinLimit(100)).toThrow(BusinessError)
+    })
+  })
+
+  describe("assertQuantityNotZero (Invariant I2)", () => {
+
+    it("should not throw for quantity > 0", () => {
+      expect(() => CartRules.assertQuantityNotZero(1)).not.toThrow()
+      expect(() => CartRules.assertQuantityNotZero(50)).not.toThrow()
+      expect(() => CartRules.assertQuantityNotZero(99)).not.toThrow()
+    })
+
+    it("should throw for zero quantity", () => {
+      expect(() => CartRules.assertQuantityNotZero(0)).toThrow(BusinessError)
+    })
+
+    it("should throw with INVALID_QUANTITY_ZERO error code", () => {
+      expect(() => CartRules.assertQuantityNotZero(0)).toThrow(BusinessError)
+      try {
+        CartRules.assertQuantityNotZero(0)
+      } catch (e) {
+        expect((e as BusinessError).code).toBe("INVALID_QUANTITY_ZERO")
+      }
+    })
+  })
+
+  describe("assertValidUpdateQuantity", () => {
+
+    it("should not throw for valid quantity", () => {
+      expect(() => CartRules.assertValidUpdateQuantity(1)).not.toThrow()
+      expect(() => CartRules.assertValidUpdateQuantity(50)).not.toThrow()
+      expect(() => CartRules.assertValidUpdateQuantity(99)).not.toThrow()
+    })
+
+    it("should throw for zero quantity", () => {
+      expect(() => CartRules.assertValidUpdateQuantity(0)).toThrow(BusinessError)
+    })
+
+    it("should throw for negative quantity", () => {
+      expect(() => CartRules.assertValidUpdateQuantity(-1)).toThrow(BusinessError)
+    })
+
+    it("should throw for quantity exceeding limit", () => {
+      expect(() => CartRules.assertValidUpdateQuantity(100)).toThrow(BusinessError)
     })
   })
 
