@@ -216,5 +216,10 @@ model OrderItem {
 
 enum OrderStatus {
   DRAFT
-  // Future: PENDING_PAYMENT, PAID, CONFIRMED, SHIPPING, SHIPPED, COMPLETED, CANCELLED
+  // Phase 5 Step 1: Order Lifecycle Foundation
+  WAITING_PAYMENT
+  PAID
+  EXPIRED
+  CANCELLED
+  // Future: SHIPPING, DELIVERED (Phase 6)
 }

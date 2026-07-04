@@ -2,6 +2,7 @@
 // ORDER DOMAIN TYPES
 // Phase 4 Step 6: Order Draft Foundation
 // Phase 4 Step 7: Order State Machine
+// Phase 5 Step 1: Order Lifecycle Foundation
 //
 // Philosophy:
 // - Order is a HISTORICAL RECORD (snapshot)
@@ -9,7 +10,8 @@
 // - OrderItem is a PURE SNAPSHOT (no relation to Product)
 // ============================================================
 
-import { Prisma } from "@prisma/client"
+import { Prisma } from '@prisma/client';
+import type { OrderStatus } from './order-lifecycle.types.js';
 
 // ----- Prisma Payload Types -----
 export type OrderWithItems = Prisma.OrderGetPayload<{
@@ -28,56 +30,22 @@ export interface CreateDraftTxInput extends CreateDraftInput {
   readonly tx: Prisma.TransactionClient;
 }
 
-// ----- Order Status (Complete State Machine) -----
+// ----- Order Status (Phase 5 Step 1) -----
 /**
- * Order Status — Complete State Machine
- * Defined BEFORE implementation to prevent future refactor
+ * Order Status — Complete Lifecycle
+ * Enhanced from Phase 4 to support payment lifecycle
+ *
+ * Note: OrderStatus is now defined in order-lifecycle.types.ts
+ * This re-export maintains backward compatibility
  */
-export type OrderStatus =
-  | "DRAFT" // Created, pending confirmation
-  | "CONFIRMED" // Checkout complete, awaiting payment
-  | "PAID" // Payment received (Future)
-  | "SHIPPING" // Order being shipped (Future)
-  | "DELIVERED" // Order delivered (Future)
-  | "CANCELLED" // Order cancelled
-  | "EXPIRED"; // Session timeout (Step 8)
+export type { OrderStatus } from './order-lifecycle.types.js';
 
-/**
- * State Transition Map
- * Defines valid transitions between states
- */
-export const OrderStateTransitions = {
-  DRAFT: {
-    canTransitionTo: ["CONFIRMED", "CANCELLED", "EXPIRED"] as const,
-    triggers: {
-      CONFIRMED: "Checkout complete",
-      CANCELLED: "User cancellation",
-      EXPIRED: "Session timeout",
-    },
-  },
-  CONFIRMED: {
-    canTransitionTo: ["PAID", "CANCELLED"] as const,
-    triggers: {
-      PAID: "Payment success",
-      CANCELLED: "Refund request",
-    },
-  },
-  PAID: {
-    canTransitionTo: ["SHIPPING", "CANCELLED"] as const,
-  },
-  SHIPPING: {
-    canTransitionTo: ["DELIVERED", "CANCELLED"] as const,
-  },
-  DELIVERED: {
-    canTransitionTo: [] as const, // Terminal state
-  },
-  CANCELLED: {
-    canTransitionTo: [] as const, // Terminal state
-  },
-  EXPIRED: {
-    canTransitionTo: [] as const, // Terminal state
-  },
-} as const;
+// Re-export from lifecycle module for convenience
+export {
+  OrderStateTransitions,
+  TERMINAL_STATES,
+  PAYABLE_STATES,
+} from './order-lifecycle.types.js';
 
 /**
  * State transition validation result
