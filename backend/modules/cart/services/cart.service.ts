@@ -3,11 +3,12 @@
 // Phase 4 Step 2: Add To Cart
 // Phase 4 Step 3: Cart Management (Get, Update, Remove, Clear)
 // Phase 4 Step 7: Add clearCartTx() for atomic transactions
+// Phase 4 Step 9: Add Cart Cache Optimization
 //
 // Responsible for:
 // - Lazy Cart creation
 // - Add item to Cart (create or increment)
-// - Get Cart (returns unified CartView)
+// - Get Cart (returns unified CartView) - WITH cache
 // - Update item quantity
 // - Remove item from cart
 // - Clear all items from cart
@@ -17,8 +18,10 @@
 // - Inventory management (Step 4)
 // - Checkout (Step 5+)
 // - Pricing (Step 5+)
+// - Cache operations (handled by adapter)
 // ============================================================
-// PHASE 4 - Step 3: Cart Management
+// PHASE 4 - Step 9: Cart Optimization
+// Cache Aside Pattern: Orchestration in CartService, operations in adapter
 // ============================================================
 
 import { prisma } from "../../../infra/db/prisma.js"
@@ -42,6 +45,7 @@ import type {
   ClearCartTxInput,
   ClearCartTxResult,
 } from "../types/cart.types.js"
+import { getCachedCart, setCachedCart, invalidateCartCache } from "./cart-cache.adapter.js"
 
 // ----- Service Implementation -----
 
@@ -128,7 +132,12 @@ export const CartService = {
     })
 
     // Step 4: Build response
-    return buildCartResponse(result.cart, result.action)
+    const response = buildCartResponse(result.cart, result.action)
+
+    // Step 5: Invalidate cache (Step 9)
+    invalidateCartCache(userId).catch(() => {})
+
+    return response
   },
 
   // ============================================================
@@ -138,11 +147,11 @@ export const CartService = {
   /**
    * Get Cart - Returns unified CartView
    *
-   * Always returns a valid CartView shape, regardless of whether
-   * the Cart exists in the database (lazy creation).
-   *
-   * Controller never needs to branch on "exists" - always gets
-   * the same response structure.
+   * WITH Cache Aside Pattern (Step 9):
+   * 1. Try cache first
+   * 2. If hit → return cached CartView
+   * 3. If miss → query PostgreSQL, cache result
+   * 4. Return CartView
    *
    * @param input - GetCartServiceInput with userId
    * @returns CartView (always valid shape)
@@ -150,19 +159,28 @@ export const CartService = {
   async getCart(input: GetCartServiceInput): Promise<GetCartResult> {
     const { userId } = input
 
-    // Find cart by userId (lazy - may not exist)
+    // Step 1: Try cache first
+    const cachedCart = await getCachedCart(userId)
+    if (cachedCart) {
+      return cachedCart
+    }
+
+    // Step 2: Cache miss - query PostgreSQL
     const cart = await prisma.cart.findUnique({
       where: { userId },
       include: { items: true },
     })
 
-    // Build unified CartView
-    if (cart) {
-      return buildCartView(cart, cart.id)
-    }
+    // Step 3: Build CartView
+    const cartView: CartView = cart
+      ? buildCartView(cart, cart.id)
+      : buildEmptyCartView(userId)
 
-    // Cart doesn't exist yet - return empty CartView
-    return buildEmptyCartView(userId)
+    // Step 4: Cache the result (fire-and-forget)
+    setCachedCart(userId, cartView).catch(() => {})
+
+    // Step 5: Return
+    return cartView
   },
 
   /**
@@ -233,13 +251,18 @@ export const CartService = {
     })
 
     // Step 3: Build response
-    return {
+    const response = {
       cart: result.cart,
       previousQuantity: result.previousQuantity,
       newQuantity: result.newQuantity,
       itemCount: result.cart.items.length,
       totalQuantity: result.cart.items.reduce((sum, item) => sum + item.quantity, 0),
     }
+
+    // Step 4: Invalidate cache (Step 9)
+    invalidateCartCache(userId).catch(() => {})
+
+    return response
   },
 
   /**
@@ -300,12 +323,17 @@ export const CartService = {
     })
 
     // Step 3: Build response
-    return {
+    const response = {
       cart: result.cart,
       removedProductId: result.removedProductId,
       itemCount: result.cart.items.length,
       totalQuantity: result.cart.items.reduce((sum, item) => sum + item.quantity, 0),
     }
+
+    // Step 4: Invalidate cache (Step 9)
+    invalidateCartCache(userId).catch(() => {})
+
+    return response
   },
 
   /**
@@ -360,10 +388,15 @@ export const CartService = {
     })
 
     // Step 3: Build response
-    return {
+    const response = {
       cart: result.cart,
       itemsRemoved: result.itemsRemoved,
     }
+
+    // Step 4: Invalidate cache (Step 9)
+    invalidateCartCache(userId).catch(() => {})
+
+    return response
   },
 
   /**

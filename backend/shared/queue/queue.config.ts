@@ -1,10 +1,11 @@
 /**
  * Queue Configuration Constants
+ * Phase 4 Step 8: Checkout Queue
  */
 
 const QUEUE_CONFIG_BASE = {
   // Queue name
-  QUEUE_NAME: "product-queue",
+  QUEUE_NAME: "checkout-queue",
 
   // Retry policy
   RETRY: {

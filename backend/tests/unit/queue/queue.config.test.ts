@@ -3,7 +3,7 @@ import { QUEUE_CONFIG } from "../../../shared/queue/queue.config.js"
 
 describe("Queue Config", () => {
   it("should have correct queue name", () => {
-    expect(QUEUE_CONFIG.QUEUE_NAME).toBe("product-queue")
+    expect(QUEUE_CONFIG.QUEUE_NAME).toBe("checkout-queue")
   })
 
   describe("RETRY", () => {
@@ -50,6 +50,6 @@ describe("Queue Config", () => {
 
   it("should have QUEUE_CONFIG defined", () => {
     expect(QUEUE_CONFIG).toBeDefined()
-    expect(QUEUE_CONFIG.QUEUE_NAME).toBe("product-queue")
+    expect(QUEUE_CONFIG.QUEUE_NAME).toBe("checkout-queue")
   })
 })

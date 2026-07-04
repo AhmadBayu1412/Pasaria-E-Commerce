@@ -81,3 +81,13 @@ export function searchCachePattern(): string {
 export function sellerCachePattern(sellerId: number): string {
   return buildKey(CACHE_KEYS.NAMESPACES.PRODUCTS, "seller", String(sellerId))
 }
+
+// ============ CART CACHE KEYS (Step 9) ===============
+
+/**
+ * Build key for cart cache
+ * Format: pasaria:cart:{userId}
+ */
+export function cartKey(userId: number): string {
+  return buildKey(CACHE_KEYS.NAMESPACES.CART, String(userId));
+}

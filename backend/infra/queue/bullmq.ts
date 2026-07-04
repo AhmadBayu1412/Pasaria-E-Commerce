@@ -1,97 +1,140 @@
-/**
- * BullMQ Queue Instance
- * Singleton pattern for queue management
- */
+// ============================================================
+// BULLMQ CONFIGURATION
+// Phase 4 Step 8: Checkout Queue
+//
+// Queue configuration for checkout background jobs
+// ============================================================
 
-import { Queue, ConnectionOptions } from "bullmq"
+import { Queue, Worker, ConnectionOptions } from "bullmq"
 import { QUEUE_CONFIG } from "../../shared/queue/index.js"
+import { CheckoutWorker } from "./checkout.worker.js"
 
-let productQueue: Queue | null = null
+let checkoutQueue: Queue | null = null
+let checkoutWorker: Worker | null = null
 
-/**
- * Create BullMQ connection options
- * Note: maxRetriesPerRequest MUST be null for BullMQ
- */
+// ============================================================
+// QUEUE INITIALIZATION
+// ============================================================
+
 function createConnectionOptions(): ConnectionOptions {
   return {
-    maxRetriesPerRequest: null
+    maxRetriesPerRequest: null,
   }
 }
 
 /**
- * Get singleton Product Queue instance
+ * Get singleton Checkout Queue instance
  */
-export function getProductQueue(): Queue {
-  if (!productQueue) {
-    productQueue = new Queue(QUEUE_CONFIG.QUEUE_NAME, {
+export function getCheckoutQueue(): Queue {
+  if (!checkoutQueue) {
+    checkoutQueue = new Queue(QUEUE_CONFIG.QUEUE_NAME, {
       connection: createConnectionOptions(),
 
       defaultJobOptions: {
         attempts: QUEUE_CONFIG.RETRY.MAX_ATTEMPTS,
         backoff: {
           type: "exponential",
-          delay: QUEUE_CONFIG.RETRY.INITIAL_DELAY
+          delay: QUEUE_CONFIG.RETRY.INITIAL_DELAY,
         },
         removeOnComplete: {
-          count: QUEUE_CONFIG.JOB.REMOVE_ON_COMPLETE
+          count: QUEUE_CONFIG.JOB.REMOVE_ON_COMPLETE,
         },
         removeOnFail: {
-          count: QUEUE_CONFIG.JOB.REMOVE_ON_FAIL
-        }
-      }
+          count: QUEUE_CONFIG.JOB.REMOVE_ON_FAIL,
+        },
+      },
     })
 
     console.log(`[QUEUE] Initialized: ${QUEUE_CONFIG.QUEUE_NAME}`)
   }
 
-  return productQueue
+  return checkoutQueue
 }
 
 /**
- * Close queue connection gracefully
+ * Initialize Checkout Worker
+ *
+ * Worker processes jobs from the checkout queue.
+ * Includes graceful shutdown handling.
+ */
+export function initCheckoutWorker(): Worker {
+  if (!checkoutWorker) {
+    checkoutWorker = new Worker(
+      QUEUE_CONFIG.QUEUE_NAME,
+      CheckoutWorker.processJob,
+      {
+        connection: createConnectionOptions(),
+        concurrency: QUEUE_CONFIG.WORKER.CONCURRENCY,
+      }
+    )
+
+    // Event handlers
+    checkoutWorker.on("completed", (job) => {
+      console.log(`[WORKER] Job ${job.id} completed`)
+    })
+
+    checkoutWorker.on("failed", (job, err) => {
+      console.error(`[WORKER] Job ${job?.id} failed:`, err)
+    })
+
+    checkoutWorker.on("error", (err) => {
+      console.error(`[WORKER] Worker error:`, err)
+    })
+
+    console.log(
+      `[WORKER] Checkout worker initialized (concurrency: ${QUEUE_CONFIG.WORKER.CONCURRENCY})`
+    )
+  }
+
+  return checkoutWorker
+}
+
+// ============================================================
+// GRACEFUL SHUTDOWN
+// ============================================================
+
+export async function closeCheckoutWorker(): Promise<void> {
+  if (checkoutWorker) {
+    console.log("[WORKER] Closing checkout worker...")
+    await checkoutWorker.close()
+    checkoutWorker = null
+    console.log("[WORKER] Checkout worker closed")
+  }
+}
+
+export async function closeCheckoutQueue(): Promise<void> {
+  if (checkoutQueue) {
+    console.log("[QUEUE] Closing checkout queue...")
+    await checkoutQueue.close()
+    checkoutQueue = null
+    console.log("[QUEUE] Checkout queue closed")
+  }
+}
+
+/**
+ * Graceful shutdown for both worker and queue
+ */
+export async function gracefulShutdown(): Promise<void> {
+  console.log("[SHUTDOWN] Initiating graceful shutdown...")
+  await closeCheckoutWorker()
+  await closeCheckoutQueue()
+  console.log("[SHUTDOWN] Graceful shutdown complete")
+}
+
+// ============================================================
+// LEGACY EXPORTS (for backward compatibility)
+// ============================================================
+
+/**
+ * @deprecated Use getCheckoutQueue() instead
+ */
+export function getProductQueue(): Queue {
+  return getCheckoutQueue()
+}
+
+/**
+ * @deprecated Use closeCheckoutQueue() instead
  */
 export async function closeQueue(): Promise<void> {
-  if (productQueue) {
-    await productQueue.close()
-    productQueue = null
-    console.log("[QUEUE] Closed")
-  }
-}
-
-/**
- * Check if queue is ready
- */
-export function isQueueReady(): boolean {
-  return productQueue !== null && productQueue.isPaused !== undefined
-}
-
-/**
- * Get queue status for health checks
- */
-export async function getQueueStatus(): Promise<{
-  name: string
-  isReady: boolean
-  jobCounts: {
-    waiting: number
-    active: number
-    completed: number
-    failed: number
-  }
-}> {
-  const queue = getProductQueue()
-  const counts = await queue.getJobCounts("waiting", "active", "completed", "failed")
-
-  // Handle case where counts might not have all keys
-  const jobCounts = {
-    waiting: counts.waiting ?? 0,
-    active: counts.active ?? 0,
-    completed: counts.completed ?? 0,
-    failed: counts.failed ?? 0
-  }
-
-  return {
-    name: QUEUE_CONFIG.QUEUE_NAME,
-    isReady: true,
-    jobCounts
-  }
+  return closeCheckoutQueue()
 }

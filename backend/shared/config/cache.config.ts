@@ -9,6 +9,7 @@ export const CACHE_TTL = {
   PRODUCT_DETAIL: 600,    // 10 menit
   CATEGORY_LIST: 1800,   // 30 menit
   SELLER_PRODUCTS: 600,  // 10 menit
+  CART: 300,             // 5 menit - Step 9
 } as const
 
 // Key namespace
@@ -18,6 +19,7 @@ export const CACHE_KEYS = {
     PRODUCTS: 'products',
     CATEGORIES: 'categories',
     USERS: 'users',
+    CART: 'cart', // Step 9
   },
 } as const
 

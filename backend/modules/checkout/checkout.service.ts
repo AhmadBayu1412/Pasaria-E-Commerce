@@ -3,6 +3,7 @@
 // Phase 4 Step 5: Checkout Orchestration Foundation
 // Phase 4 Step 6: Include Product Query for Snapshot
 // Phase 4 Step 7: Complete Checkout with Transaction
+// Phase 4 Step 8: Background Jobs Integration
 //
 // Philosophy:
 // - Application Service, NOT Domain Service
@@ -10,6 +11,7 @@
 // - Uses domain contracts, not internal entities
 // - Let domains compute their own fields
 // - SOLE TRANSACTION OWNER (Step 7)
+// - POST-COMMIT QUEUE ENQUEUE (Step 8)
 // ============================================================
 
 import { prisma } from "../../infra/db/prisma.js"
@@ -19,6 +21,7 @@ import { getProductForSnapshot } from "../product/services/product.service.js"
 import { CheckoutRules } from "./checkout.rules.js"
 import { OrderService } from "../order/order.service.js"
 import { BusinessError } from "../../shared/errors/business.error.js"
+import { CheckoutQueueProducer } from "../../infra/queue/checkout.producer.js"
 import type {
   InitiateCheckoutInput,
   CheckoutPreview,
@@ -132,6 +135,7 @@ export const CheckoutService = {
 
   // ============================================================
   // STEP 7: COMPLETE CHECKOUT — SOLE TRANSACTION ORCHESTRATOR
+  // STEP 8: POST-COMMIT QUEUE ENQUEUE
   // ============================================================
 
   /**
@@ -140,12 +144,16 @@ export const CheckoutService = {
    * This is the ONLY place where cross-domain transaction is opened.
    * All other services just receive the transaction client.
    *
+   * After commit, jobs are enqueued to BullMQ for:
+   * - Order confirmation email
+   * - Audit log creation
+   *
    * Responsibilities:
    * 1. Get checkout preview (validates cart + inventory)
    * 2. Open transaction
    * 3. Coordinate Order + Inventory + Cart
    * 4. Handle commit/rollback
-   * 5. Enqueue post-commit jobs (Step 8)
+   * 5. Enqueue post-commit jobs (Step 8) - FIRE AND FORGET
    *
    * @param input - CompleteCheckoutInput with userId
    * @returns CompleteCheckoutResult
@@ -165,6 +173,9 @@ export const CheckoutService = {
     // STEP 2: Validate for completion
     CheckoutRules.assertPreviewValidForCompletion(preview)
     CheckoutRules.assertCartExists(preview.summary.cartId)
+
+    // Record transaction start time for audit
+    const transactionStartTime = Date.now()
 
     // STEP 3: Execute in transaction
     // NOTE: This is the ONLY place where prisma.$transaction is called
@@ -195,12 +206,48 @@ export const CheckoutService = {
       }
     })
 
-    // STEP 4: Post-commit operations (outside transaction)
-    // TODO: Step 8 - Enqueue BullMQ jobs here
-    // - Enqueue order confirmation email
-    // - Enqueue audit log
+    // ============================================================
+    // STEP 8: POST-COMMIT OPERATIONS
+    // These operations happen AFTER transaction commits
+    // They are FIRE-AND-FORGET - checkout succeeds even if these fail
+    // ============================================================
+
+    // Get user email for email job
+    // In production, this would come from user service
+    const userEmail = `user-${userId}@example.com`
+
+    // Enqueue order confirmation email (fire-and-forget)
+    void CheckoutQueueProducer.enqueueOrderConfirmationEmail({
+      orderId: result.order.id,
+      userId,
+      email: userEmail,
+      template: "order_confirmation",
+      data: {
+        orderId: result.order.id,
+        totalAmount: result.order.subtotal,
+        itemCount: result.order.totalItemCount,
+      },
+    }).catch((err) => {
+      console.error("[CHECKOUT] Failed to enqueue email job:", err)
+    })
+
+    // Enqueue audit log (fire-and-forget)
+    void CheckoutQueueProducer.enqueueAuditLog({
+      orderId: result.order.id,
+      userId,
+      action: "ORDER_CONFIRMED",
+      metadata: {
+        totalAmount: result.order.subtotal,
+        itemCount: result.order.totalItemCount,
+        transactionTimeMs: Date.now() - transactionStartTime,
+      },
+    }).catch((err) => {
+      console.error("[CHECKOUT] Failed to enqueue audit job:", err)
+    })
 
     // STEP 5: Return result
+    // Note: Queue jobs are enqueued but not awaited
+    // Checkout succeeds even if queue operations fail
     return {
       orderId: result.order.id,
       status: result.order.status as "DRAFT",
