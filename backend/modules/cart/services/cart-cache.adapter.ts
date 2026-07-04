@@ -32,13 +32,20 @@ export async function getCachedCart(userId: number): Promise<CartView | null> {
  *
  * @param userId - User ID
  * @param cartView - Cart data to cache
+ *
+ * NOTE: Fire-and-forget pattern. Errors are logged but not thrown.
  */
 export async function setCachedCart(
   userId: number,
   cartView: CartView
 ): Promise<void> {
-  const key = cartKey(userId);
-  await cacheSet(key, cartView, CACHE_TTL.CART);
+  try {
+    const key = cartKey(userId);
+    await cacheSet(key, cartView, CACHE_TTL.CART);
+  } catch (error) {
+    // Fire-and-forget: Log error but don't throw
+    console.error(`[CACHE] Failed to set cart for user ${userId}:`, error);
+  }
 }
 
 /**
@@ -46,8 +53,16 @@ export async function setCachedCart(
  *
  * Called after every mutation.
  * Centralized invalidation - mutations don't know WHAT to invalidate.
+ *
+ * NOTE: Fire-and-forget pattern. Errors are logged but not thrown.
+ * Cache invalidation failure should NOT block business operations.
  */
 export async function invalidateCartCache(userId: number): Promise<void> {
-  const key = cartKey(userId);
-  await cacheDelete(key);
+  try {
+    const key = cartKey(userId);
+    await cacheDelete(key);
+  } catch (error) {
+    // Fire-and-forget: Log error but don't throw
+    console.error(`[CACHE] Failed to invalidate cart for user ${userId}:`, error);
+  }
 }

@@ -52,7 +52,7 @@ export const EmailHandler = {
       console.log(`[EMAIL HANDLER] Order confirmation email`)
       console.log(`  Order ID: ${orderId}`)
       console.log(`  To: ${email}`)
-      console.log(`  Template: ${data.template}`)
+      console.log(`  Template: order_confirmation`)
       console.log(`  Amount: ${data.totalAmount}`)
       console.log(`  Items: ${data.itemCount}`)
 

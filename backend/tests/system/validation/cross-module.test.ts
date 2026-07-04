@@ -24,7 +24,9 @@ describe("Cross-Module Integration Tests", () => {
         .post("/auth/login")
         .send({ email: "seller@test.com", password: "Seller123!" })
 
-      sellerCookies = loginRes.headers["set-cookie"] || []
+      sellerCookies = Array.isArray(loginRes.headers["set-cookie"]) 
+        ? loginRes.headers["set-cookie"] as string[]
+        : []
     } catch {
       // Login may fail, tests will skip accordingly
     }

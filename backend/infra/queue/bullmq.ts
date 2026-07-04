@@ -138,3 +138,54 @@ export function getProductQueue(): Queue {
 export async function closeQueue(): Promise<void> {
   return closeCheckoutQueue()
 }
+
+// ============================================================
+// QUEUE STATUS (for health checks)
+// ============================================================
+
+export interface QueueStatus {
+  name: string
+  isReady: boolean
+  jobCounts: {
+    active: number
+    completed: number
+    failed: number
+    delayed: number
+    waiting: number
+  }
+}
+
+/**
+ * Get queue status for health checks
+ */
+export async function getQueueStatus(): Promise<QueueStatus> {
+  const queue = getCheckoutQueue()
+  
+  try {
+    const counts = await queue.getJobCounts()
+    
+    return {
+      name: QUEUE_CONFIG.QUEUE_NAME,
+      isReady: true,
+      jobCounts: {
+        active: counts.active || 0,
+        completed: counts.completed || 0,
+        failed: counts.failed || 0,
+        delayed: counts.delayed || 0,
+        waiting: counts.waiting || 0,
+      },
+    }
+  } catch {
+    return {
+      name: QUEUE_CONFIG.QUEUE_NAME,
+      isReady: false,
+      jobCounts: {
+        active: 0,
+        completed: 0,
+        failed: 0,
+        delayed: 0,
+        waiting: 0,
+      },
+    }
+  }
+}

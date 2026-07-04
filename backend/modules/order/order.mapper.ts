@@ -69,6 +69,7 @@ export const OrderMapper = {
       totalItemCount: order.totalItemCount,
       subtotal: Number(order.subtotal),
       createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
     }
   },
 } as const

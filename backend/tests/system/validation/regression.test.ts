@@ -25,7 +25,9 @@ describe("System Regression Tests", () => {
         .post("/auth/login")
         .send({ email: "seller@test.com", password: "Seller123!" })
 
-      sellerCookies = loginRes.headers["set-cookie"] || []
+      sellerCookies = Array.isArray(loginRes.headers["set-cookie"]) 
+        ? loginRes.headers["set-cookie"] as string[]
+        : []
     } catch {
       // If login fails, tests will fail naturally
     }
