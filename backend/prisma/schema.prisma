@@ -192,6 +192,7 @@ model Order {
   
   // Relations
   items          OrderItem[]
+  payments       Payment[]   // One Order can have many Payment attempts
   
   @@index([userId])
   @@index([status])
@@ -222,4 +223,47 @@ enum OrderStatus {
   EXPIRED
   CANCELLED
   // Future: SHIPPING, DELIVERED (Phase 6)
+}
+
+// ============================================================
+// Payment MODEL (Phase 5 Step 2)
+// Payment Aggregate - Record of payment attempt
+//
+// Design: MINIMAL for Step 2
+// - providerReference NOT included (Step 7)
+// - expiresAt NOT included (Step 8)
+// - orderId uses @index (supports retry)
+// ============================================================
+
+enum PaymentProvider {
+  STUB  // Step 2: Only STUB for testing
+  // MIDTRANS, XENDIT, STRIPE added in Step 7
+}
+
+enum PaymentStatus {
+  PENDING   // Intent created
+  SUCCESS   // Payment confirmed (Step 6+)
+  DECLINED  // Gateway rejected (Step 6+)
+  EXPIRED   // Timeout exceeded (Step 8+)
+}
+
+model Payment {
+  id                Int              @id @default(autoincrement())
+  orderId           Int              // NOT @unique - supports multiple attempts
+  userId            Int
+
+  amount            Int              // In smallest unit (rupiah)
+  currency          String           @default("IDR")
+
+  provider          PaymentProvider
+
+  status            PaymentStatus    @default(PENDING)
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  order             Order            @relation(fields: [orderId], references: [id])
+
+  @@index([status])
+  @@index([orderId])
 }

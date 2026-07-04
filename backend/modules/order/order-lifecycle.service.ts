@@ -69,7 +69,7 @@ export const OrderLifecycleService = {
     // STEP 3: Execute transition
     await prisma.order.update({
       where: { id: orderId },
-      data: { status: targetStatus },
+      data: { status: targetStatus as unknown as 'DRAFT' },
     });
 
     // STEP 4: Fetch updated order
