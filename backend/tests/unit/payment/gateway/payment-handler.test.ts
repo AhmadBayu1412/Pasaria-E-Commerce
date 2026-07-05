@@ -48,6 +48,14 @@ describe('PaymentHandler', () => {
         metadata: { orderId: 100, paymentId: 1, externalReference: 'PAY-1-100' },
         createdAt: new Date(),
       }),
+      getTransactionStatus: vi.fn().mockResolvedValue({
+        transactionId: 'TXN_123',
+        externalReference: 'PAY-1-100',
+        status: 'PENDING',
+        amount: 100000,
+        currency: 'IDR',
+        updatedAt: new Date(),
+      }),
     };
   });
 

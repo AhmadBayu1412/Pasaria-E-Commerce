@@ -21,6 +21,14 @@ describe('GatewayChargeService', () => {
       createdAt: new Date(),
       ...overrides,
     }),
+    getTransactionStatus: vi.fn().mockResolvedValue({
+      transactionId: 'TXN_123',
+      externalReference: 'PAY-1-100',
+      status: 'PENDING',
+      amount: 100000,
+      currency: 'IDR',
+      updatedAt: new Date(),
+    }),
   });
 
   const createValidInput = (): InitiateChargeInput => ({
@@ -83,7 +91,8 @@ describe('GatewayChargeService', () => {
         createCharge: vi.fn().mockRejectedValue(
           PaymentGatewayError.networkError('Connection refused'),
         ),
-      } as PaymentGateway;
+        getTransactionStatus: vi.fn(),
+      } as unknown as PaymentGateway;
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 
@@ -98,7 +107,8 @@ describe('GatewayChargeService', () => {
         createCharge: vi.fn().mockRejectedValue(
           PaymentGatewayError.authError('Invalid credentials'),
         ),
-      } as PaymentGateway;
+        getTransactionStatus: vi.fn(),
+      } as unknown as PaymentGateway;
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 
@@ -112,7 +122,8 @@ describe('GatewayChargeService', () => {
         createCharge: vi.fn().mockRejectedValue(
           PaymentGatewayError.networkError('Connection refused'),
         ),
-      } as PaymentGateway;
+        getTransactionStatus: vi.fn(),
+      } as unknown as PaymentGateway;
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 
@@ -126,7 +137,8 @@ describe('GatewayChargeService', () => {
         createCharge: vi.fn().mockRejectedValue(
           PaymentGatewayError.timeoutError('Request timed out'),
         ),
-      } as PaymentGateway;
+        getTransactionStatus: vi.fn(),
+      } as unknown as PaymentGateway;
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 
@@ -140,7 +152,8 @@ describe('GatewayChargeService', () => {
         createCharge: vi.fn().mockRejectedValue(
           PaymentGatewayError.invalidRequest('Missing required field'),
         ),
-      } as PaymentGateway;
+        getTransactionStatus: vi.fn(),
+      } as unknown as PaymentGateway;
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 
@@ -152,7 +165,8 @@ describe('GatewayChargeService', () => {
     it('should wrap unknown errors', async () => {
       const gateway = {
         createCharge: vi.fn().mockRejectedValue(new Error('Unexpected')),
-      } as PaymentGateway;
+        getTransactionStatus: vi.fn(),
+      } as unknown as PaymentGateway;
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 

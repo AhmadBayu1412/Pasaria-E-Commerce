@@ -21,6 +21,7 @@
 import { WebhookValidator } from './webhook.validator.js';
 import { WebhookRepository } from './webhook.repository.js';
 import { PaymentConfirmationService } from '../payment-confirmation.service.js';
+import { PaymentConfirmationSource } from '../recovery/payment-recovery.types.js';
 import type {
   WebhookPayload,
   WebhookResponse,
@@ -163,6 +164,7 @@ export class WebhookService {
         orderId: parseInt(payload.orderId, 10),
         eventType: this.extractEventType(payload.status),
         amount: payload.amount,
+        source: PaymentConfirmationSource.WEBHOOK,
       });
 
       // Step 6: Mark as processed

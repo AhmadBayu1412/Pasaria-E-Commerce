@@ -1,6 +1,7 @@
 // ============================================================
 // PAYMENT DOMAIN TYPES
 // Phase 5 Step 2: Payment Domain Foundation
+// Phase 5 Step 8: Extended with gateway fields
 //
 // Philosophy:
 // - Payment is a RECORD OF ATTEMPT, not money
@@ -25,7 +26,7 @@ export type PaymentProvider = 'STUB';
  * - SUCCESS/DECLINED/EXPIRED: Added for completeness, used in later steps
  */
 export type PaymentStatus =
-| 'PENDING' // Intent created
+  | 'PENDING' // Intent created
   | 'SUCCESS' // Payment confirmed (Step 6+)
   | 'FAILED' // Payment failed (Step 6+)
   | 'CANCELLED' // Payment cancelled by user (Step 6+)
@@ -44,6 +45,11 @@ export type PaymentStatus =
  * - providerReference NOT included (Step 7)
  * - expiresAt NOT included (Step 8)
  * - orderId is @index (supports retry - one Order can have many Payments)
+ *
+ * Phase 5 Step 7-8 Extensions:
+ * - externalReference: Identity for webhook correlation
+ * - snapToken: Token for redirect to payment page
+ * - gatewayTransactionId: Gateway's transaction reference
  */
 export interface Payment {
   readonly id: number;
@@ -56,6 +62,11 @@ export interface Payment {
   readonly provider: PaymentProvider;
 
   readonly status: PaymentStatus;
+
+  // Phase 5 Step 7-8: Gateway integration fields
+  readonly externalReference: string; // Identity for webhook correlation
+  readonly snapToken: string | null; // Token for redirect to payment page
+  readonly gatewayTransactionId: string | null; // Gateway's transaction reference
 
   readonly createdAt: Date;
   readonly updatedAt: Date;

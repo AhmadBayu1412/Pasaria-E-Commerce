@@ -1,6 +1,7 @@
 // ============================================================
 // PAYMENT CONFIRMATION SERVICE
 // Phase 5 Step 6: Business Logic
+// Phase 5 Step 8: Extended with synchronizeStatus() and source tracking
 //
 // Philosophy:
 // - Pure business logic, no transport concerns
@@ -19,6 +20,7 @@ import { prisma } from '../../infra/db/prisma.js';
 import { PaymentRepository } from './payment.repository.js';
 import { BusinessError } from '../../shared/errors/business.error.js';
 import type { PaymentStatus } from './payment.types.js';
+import { PaymentConfirmationSource } from './recovery/payment-recovery.types.js';
 
 // ============================================================
 // INVARIANTS (Documented for Code Review)
@@ -56,11 +58,16 @@ const INVARIANT_AMOUNT_MATCH = 'Gateway amount must match stored payment amount'
  */
 const INVARIANT_ORDER_SYNC = 'Order state is synchronized with Payment state atomically';
 
+// ============================================================
+// INPUT/OUTPUT TYPES
+// ============================================================
+
 export interface ConfirmPaymentInput {
   readonly gatewayTransactionId: string; // PRIMARY KEY — unique per transaction
   readonly orderId: number;
   readonly eventType: string;
   readonly amount: number;
+  readonly source: PaymentConfirmationSource; // Phase 5 Step 8: Track source
 }
 
 export interface ConfirmPaymentResult {
@@ -69,6 +76,34 @@ export interface ConfirmPaymentResult {
   readonly previousPaymentStatus: PaymentStatus;
   readonly newPaymentStatus: PaymentStatus;
   readonly idempotent: boolean; // true if this was a duplicate request
+  readonly source: PaymentConfirmationSource; // Phase 5 Step 8: Track source
+}
+
+/**
+ * Synchronize Status Input
+ * Phase 5 Step 8: For Recovery Engine
+ *
+ * Recovery cukup panggil satu method ini, tidak perlu pilih confirm/fail sendiri.
+ */
+export interface SynchronizeStatusInput {
+  readonly gatewayTransactionId: string;
+  readonly orderId: number;
+  readonly gatewayStatus: string; // 'SUCCESS', 'FAILED', 'EXPIRED', 'CANCELLED'
+  readonly amount: number;
+  readonly source: PaymentConfirmationSource;
+}
+
+/**
+ * Synchronize Status Result
+ * Phase 5 Step 8: For Recovery Engine
+ */
+export interface SynchronizeStatusResult {
+  readonly paymentId: number;
+  readonly orderId: number;
+  readonly previousStatus: string;
+  readonly newStatus: string;
+  readonly changed: boolean;
+  readonly source: PaymentConfirmationSource;
 }
 
 // ============================================================
@@ -83,6 +118,7 @@ export interface ConfirmPaymentResult {
  * - PENDING → FAILED (via PAYMENT_DENY, PAYMENT_FAILURE)
  * - PENDING → CANCELLED (via PAYMENT_EXPIRE, PAYMENT_CANCEL)
  * - PENDING → DECLINED (via PAYMENT_DENY)
+ * - PENDING → EXPIRED (via PAYMENT_EXPIRE)
  *
  * Terminal states (no outbound transitions):
  * - SUCCESS
@@ -94,6 +130,30 @@ export interface ConfirmPaymentResult {
 const SUCCESS_EVENTS = ['PAYMENT_SETTLEMENT', 'PAYMENT_SUCCESS'];
 const FAILURE_EVENTS = ['PAYMENT_DENY', 'PAYMENT_FAILURE', 'PAYMENT_EXPIRE', 'PAYMENT_CANCEL'];
 const TERMINAL_STATUSES: PaymentStatus[] = ['SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED', 'DECLINED'];
+
+/**
+ * Gateway Status to Payment Status mapping
+ * Phase 5 Step 8: For Recovery Engine
+ */
+const GATEWAY_TO_PAYMENT_STATUS: Record<string, PaymentStatus> = {
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  EXPIRED: 'EXPIRED',
+  CANCELLED: 'CANCELLED',
+  PENDING: 'PENDING',
+};
+
+/**
+ * Gateway Status to Event Type mapping
+ * Phase 5 Step 8: For Recovery Engine
+ */
+const GATEWAY_TO_EVENT_TYPE: Record<string, string> = {
+  PENDING: 'PAYMENT_PENDING',
+  SUCCESS: 'PAYMENT_SETTLEMENT',
+  FAILED: 'PAYMENT_FAILURE',
+  EXPIRED: 'PAYMENT_EXPIRE',
+  CANCELLED: 'PAYMENT_CANCEL',
+};
 
 export class PaymentConfirmationService {
   /**
@@ -160,6 +220,7 @@ export class PaymentConfirmationService {
         previousPaymentStatus: payment.status,
         newPaymentStatus: payment.status,
         idempotent: true,
+        source: input.source,
       };
     }
 
@@ -201,6 +262,7 @@ export class PaymentConfirmationService {
             previousStatus: payment!.status,
             newStatus: 'SUCCESS',
             confirmedAt: new Date().toISOString(),
+            source: input.source, // Phase 5 Step 8: Track source
           },
         },
       });
@@ -214,7 +276,10 @@ export class PaymentConfirmationService {
       };
     });
 
-    return result;
+    return {
+      ...result,
+      source: input.source,
+    };
   }
 
   /**
@@ -229,6 +294,7 @@ export class PaymentConfirmationService {
   async failPayment(
     gatewayTransactionId: string,
     reason: string,
+    source: PaymentConfirmationSource,
   ): Promise<ConfirmPaymentResult | null> {
     const payment = await PaymentRepository.findByTransactionId(gatewayTransactionId);
 
@@ -244,6 +310,7 @@ export class PaymentConfirmationService {
         previousPaymentStatus: payment.status,
         newPaymentStatus: payment.status,
         idempotent: true,
+        source,
       };
     }
 
@@ -267,6 +334,7 @@ export class PaymentConfirmationService {
             gatewayTransactionId,
             reason,
             failedAt: new Date().toISOString(),
+            source, // Phase 5 Step 8: Track source
           },
         },
       });
@@ -278,6 +346,92 @@ export class PaymentConfirmationService {
       previousPaymentStatus: payment.status,
       newPaymentStatus: 'FAILED',
       idempotent: false,
+      source,
     };
+  }
+
+  /**
+   * Synchronize Status from Recovery
+   * Phase 5 Step 8: For Recovery Engine
+   *
+   * Recovery cukup panggil method ini.
+   * ConfirmationService yang menentukan logika transisi.
+   *
+   * Flow:
+   * 1. Map gateway status to event type
+   * 2. Call appropriate method (confirm/fail)
+   * 3. Return unified result
+   */
+  async synchronizeStatus(
+    input: SynchronizeStatusInput,
+  ): Promise<SynchronizeStatusResult> {
+    // Map gateway status to payment status
+    const newPaymentStatus = this.gatewayStatusToPaymentStatus(input.gatewayStatus);
+
+    // Handle based on status
+    if (newPaymentStatus === 'SUCCESS') {
+      const eventType = this.gatewayStatusToEventType(input.gatewayStatus);
+
+      const result = await this.confirmPayment({
+        gatewayTransactionId: input.gatewayTransactionId,
+        orderId: input.orderId,
+        eventType,
+        amount: input.amount,
+        source: input.source,
+      });
+
+      return {
+        paymentId: result.paymentId,
+        orderId: result.orderId,
+        previousStatus: result.previousPaymentStatus,
+        newStatus: result.newPaymentStatus,
+        changed: !result.idempotent,
+        source: input.source,
+      };
+    } else {
+      // FAILED, EXPIRED, CANCELLED
+      const result = await this.failPayment(
+        input.gatewayTransactionId,
+        `Payment ${newPaymentStatus.toLowerCase()} via ${input.source.toLowerCase()}`,
+        input.source,
+      );
+
+      if (!result) {
+        // Payment not found - this shouldn't happen in recovery
+        return {
+          paymentId: 0,
+          orderId: input.orderId,
+          previousStatus: 'UNKNOWN',
+          newStatus: newPaymentStatus,
+          changed: false,
+          source: input.source,
+        };
+      }
+
+      return {
+        paymentId: result.paymentId,
+        orderId: result.orderId,
+        previousStatus: result.previousPaymentStatus,
+        newStatus: result.newPaymentStatus,
+        changed: !result.idempotent,
+        source: input.source,
+      };
+    }
+  }
+
+  /**
+   * Map gateway status to payment status
+   * Phase 5 Step 8: For Recovery Engine
+   */
+  private gatewayStatusToPaymentStatus(gatewayStatus: string): PaymentStatus {
+    return GATEWAY_TO_PAYMENT_STATUS[gatewayStatus] ?? 'PENDING';
+  }
+
+  /**
+   * Map gateway status to event type
+   * Phase 5 Step 8: For Recovery Engine
+   */
+  private gatewayStatusToEventType(status: string): string {
+    return GATEWAY_TO_EVENT_TYPE[status] ?? 'PAYMENT_PENDING';
   }
 }

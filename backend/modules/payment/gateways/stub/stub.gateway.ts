@@ -1,6 +1,7 @@
 // ============================================================
 // STUB GATEWAY
 // Phase 5 Step 4: Gateway Abstraction
+// Phase 5 Step 8: Added getTransactionStatus()
 //
 // Philosophy:
 // - Dummy implementation for development and testing
@@ -15,22 +16,36 @@
 // 4. CI/CD environment
 // ============================================================
 
-import type { PaymentGateway } from '../gateway.interface.js';
+import type {
+  GatewayTransactionStatus,
+  PaymentGateway,
+} from '../gateway.interface.js';
 import type { CreateChargeRequest, CreateChargeResult } from '../gateway.types.js';
 import { PaymentGatewayError } from '../gateway.errors.js';
 
 export interface StubGatewayOptions {
   shouldSucceed?: boolean;
   simulatedDelayMs?: number;
+  stubTransactionStatus?: GatewayTransactionStatus;
 }
 
 export class StubGateway implements PaymentGateway {
   private readonly shouldSucceed: boolean;
   private readonly simulatedDelayMs: number;
+  private readonly stubTransactionStatus: GatewayTransactionStatus;
 
   constructor(options: StubGatewayOptions = {}) {
     this.shouldSucceed = options.shouldSucceed ?? true;
     this.simulatedDelayMs = options.simulatedDelayMs ?? 0;
+    // Default stub status - returns PENDING
+    this.stubTransactionStatus = options.stubTransactionStatus ?? {
+      transactionId: 'STUB_TXN_001',
+      externalReference: '',
+      status: 'PENDING',
+      amount: 0,
+      currency: 'IDR',
+      updatedAt: new Date(),
+    };
   }
 
   async createCharge(request: CreateChargeRequest): Promise<CreateChargeResult> {
@@ -57,6 +72,19 @@ export class StubGateway implements PaymentGateway {
         externalReference: request.externalReference,
       },
       createdAt: new Date(),
+    };
+  }
+
+  async getTransactionStatus(externalReference: string): Promise<GatewayTransactionStatus> {
+    if (this.simulatedDelayMs > 0) {
+      await this.delay(this.simulatedDelayMs);
+    }
+
+    // Return a copy with the external reference set
+    return {
+      ...this.stubTransactionStatus,
+      externalReference,
+      updatedAt: new Date(),
     };
   }
 
