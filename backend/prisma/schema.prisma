@@ -180,20 +180,21 @@ model Order {
   id             Int         @id @default(autoincrement())
   userId         Int
   status         OrderStatus @default(DRAFT)
-  
+
   // Snapshot totals
   totalQuantity  Int         @default(0)   // SUM of all item quantities
   totalItemCount Int         @default(0)   // COUNT of distinct items
   subtotal       Decimal     @default(0)   // SUM of all subtotals
-  
+
   // Timestamps
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  
+
   // Relations
   items          OrderItem[]
   payments       Payment[]   // One Order can have many Payment attempts
-  
+  timeline       OrderTimeline[]  // Audit log
+
   @@index([userId])
   @@index([status])
 }
@@ -202,17 +203,40 @@ model OrderItem {
   id           Int      @id @default(autoincrement())
   orderId      Int
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+
   // ===== PURE SNAPSHOT - NO RELATION TO PRODUCT =====
   productId    Int      // Historical reference only
   productName  String   // Snapshot at time of order
   unitPrice    Decimal  // Snapshot at time of order
   quantity     Int
   subtotal     Decimal  // quantity * unitPrice
-  
+
   createdAt    DateTime @default(now())
-  
+
   @@index([orderId])
+}
+
+// ============================================================
+// OrderTimeline MODEL (Phase 5 Step 6)
+// Audit log for order state transitions
+//
+// Purpose:
+// - Record all state changes for auditing
+// - Immutable append-only log
+// ============================================================
+
+model OrderTimeline {
+  id        Int       @id @default(autoincrement())
+  orderId   Int
+  event     String                // Event name (e.g., "PAYMENT_CONFIRMED")
+  metadata  Json?                // Additional event data
+
+  createdAt DateTime @default(now())
+
+  order     Order     @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([event])
 }
 
 enum OrderStatus {
@@ -257,6 +281,9 @@ model Payment {
 
   provider          PaymentProvider
 
+  // Gateway transaction reference (set when webhook confirms payment)
+  gatewayTransactionId String?       // For webhook deduplication (Step 6)
+
   status            PaymentStatus    @default(PENDING)
 
   createdAt         DateTime         @default(now())
@@ -264,6 +291,97 @@ model Payment {
 
   order             Order            @relation(fields: [orderId], references: [id])
 
+  // Relations
+  webhookEvents     WebhookEvent[]
+
   @@index([status])
   @@index([orderId])
+  @@index([gatewayTransactionId])
+}
+
+// ============================================================
+// WebhookEvent MODEL (Phase 5 Step 6)
+//
+// Purpose:
+// 1. DEDUPLICATION — Prevent same event from being processed twice
+// 2. AUDIT LOG — Record all webhook events for debugging
+//
+// Design:
+// - gatewayTransactionId as UNIQUE identifier (deduplication)
+// - Minimal fields for deduplication
+// - Full request stored for audit trail
+// NOTE: rawPayload is subject to PII redaction (Step 7+)
+// ============================================================
+
+enum WebhookEventStatus {
+  PENDING    // Event received, awaiting processing
+  PROCESSED  // Successfully processed
+  FAILED     // Processing failed (logged, not retried automatically)
+  // NOTE: IGNORED removed — duplicates are still PROCESSED, just skipped
+}
+
+model WebhookEvent {
+  id                     Int              @id @default(autoincrement())
+  gatewayTransactionId   String           @unique  // Deduplication key
+  gatewayProvider        String                        // "STUB", "MIDTRANS", "XENDIT"
+
+  // Minimal event data (for deduplication query)
+  eventType             String                        // "PAYMENT_SETTLEMENT"
+  paymentId             Int?                         // FK to Payment (after processing)
+
+  // Full payload stored for AUDIT purposes only
+  // WARNING: Do not expose raw payload in API responses
+  // Subject to PII redaction in Step 7+
+  rawPayload            Json                          // Full webhook payload
+
+  // Processing state
+  status                WebhookEventStatus @default(PENDING)
+  processedAt           DateTime?
+  errorMessage          String?
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  // Relations
+  payment               Payment?          @relation(fields: [paymentId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([gatewayProvider])
+}
+
+// ============================================================
+// IdempotencyRecord MODEL (Phase 5 Step 5)
+// Idempotency Layer - Prevents duplicate charge from retry/timeout
+//
+// Design Decisions:
+// - idempotencyKey @unique = database-level atomic lock
+// - status field = PENDING | COMPLETED | FAILED
+// - expiresAt nullable = NOT used in Step 5 (Phase Lanjutan)
+// ============================================================
+
+enum IdempotencyStatus {
+  PENDING   // Request sedang diproses (owner dari key ini)
+  COMPLETED // Request selesai, response tersimpan (bisa direplay)
+  FAILED    // Request gagal, boleh retry
+}
+
+model IdempotencyRecord {
+  id                Int              @id @default(autoincrement())
+  idempotencyKey    String           @unique  // Atomic lock - one request per key
+  resourceType      String                        // "PAYMENT_INITIATE", "REFUND", etc.
+  resourceId        Int?                          // FK to Payment.id (nullable for pending)
+
+  // Response cache
+  responseData      Json                            // Stored response body
+  responseStatus    Int                             // HTTP status code
+
+  // Metadata
+  status            IdempotencyStatus @default(PENDING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  // NOTE: expiresAt NOT used in Step 5 (Phase Lanjutan for TTL)
+  expiresAt         DateTime?
+
+  @@index([idempotencyKey])
+  @@index([resourceType, status])
 }

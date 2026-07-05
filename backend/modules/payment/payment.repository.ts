@@ -97,4 +97,52 @@ export const PaymentRepository = {
 
     return PaymentMapper.toDomain(payment);
   },
+
+  /**
+   * Find Payment by gatewayTransactionId
+   * Used by: Webhook handler (Step 6) for exact match
+   */
+  async findByTransactionId(gatewayTransactionId: string): Promise<Payment | null> {
+    const payment = await prisma.payment.findFirst({
+      where: { gatewayTransactionId },
+    });
+
+    return payment ? PaymentMapper.toDomain(payment) : null;
+  },
+
+  /**
+   * Find PENDING Payment by Order ID
+   * Used by: Webhook handler for fallback lookup
+   */
+  async findPendingByOrderId(orderId: number): Promise<Payment | null> {
+    const payment = await prisma.payment.findFirst({
+      where: {
+        orderId,
+        status: 'PENDING',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return payment ? PaymentMapper.toDomain(payment) : null;
+  },
+
+  /**
+   * Update Payment with transaction ID and status
+   * Used by: Webhook handler (Step 6)
+   */
+  async updateTransactionAndStatus(
+    id: number,
+    gatewayTransactionId: string,
+    status: PaymentStatus,
+  ): Promise<Payment> {
+    const payment = await prisma.payment.update({
+      where: { id },
+      data: {
+        gatewayTransactionId,
+        status,
+      },
+    });
+
+    return PaymentMapper.toDomain(payment);
+  },
 } as const;
