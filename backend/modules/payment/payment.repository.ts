@@ -27,7 +27,7 @@ export const PaymentRepository = {
    * 
    * @param input - CreatePaymentInput with explicit status
    */
-  async create(input: CreatePaymentInput & { status: PaymentStatus }): Promise<Payment> {
+  async create(input: CreatePaymentInput & { status: PaymentStatus; externalReference: string }): Promise<Payment> {
     const payment = await prisma.payment.create({
       data: {
         orderId: input.orderId,
@@ -35,7 +35,8 @@ export const PaymentRepository = {
         amount: input.amount,
         currency: input.currency,
         provider: input.provider,
-        status: input.status,
+        status: input.status as any,
+        externalReference: input.externalReference,
       },
     });
 
@@ -92,7 +93,7 @@ export const PaymentRepository = {
   async updateStatus(id: number, status: PaymentStatus): Promise<Payment> {
     const payment = await prisma.payment.update({
       where: { id },
-      data: { status },
+      data: { status: status as any },
     });
 
     return PaymentMapper.toDomain(payment);
@@ -139,7 +140,7 @@ export const PaymentRepository = {
       where: { id },
       data: {
         gatewayTransactionId,
-        status,
+        status: status as any,
       },
     });
 

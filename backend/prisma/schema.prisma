@@ -260,13 +260,16 @@ enum OrderStatus {
 // ============================================================
 
 enum PaymentProvider {
-  STUB  // Step 2: Only STUB for testing
-  // MIDTRANS, XENDIT, STRIPE added in Step 7
+  STUB      // Step 2: Only STUB for testing
+  MIDTRANS  // Step 7: Midtrans Snap API
+  XENDIT    // Future: Xendit Invoice API
 }
 
 enum PaymentStatus {
   PENDING   // Intent created
   SUCCESS   // Payment confirmed (Step 6+)
+  FAILED    // Payment failed (Step 6+)
+  CANCELLED // Payment cancelled by user (Step 6+)
   DECLINED  // Gateway rejected (Step 6+)
   EXPIRED   // Timeout exceeded (Step 8+)
 }
@@ -281,8 +284,17 @@ model Payment {
 
   provider          PaymentProvider
 
+  // External reference - identity milik kita untuk webhook lookup
+  // Format: "PAY-{paymentId}-{orderId}"
+  // Dibuat di Domain layer (PaymentIntentService)
+  externalReference    String        @unique
+
+  // Snap token - untuk redirect (dari Snap API)
+  snapToken         String?
+
   // Gateway transaction reference (set when webhook confirms payment)
-  gatewayTransactionId String?       // For webhook deduplication (Step 6)
+  // UNIQUE: Satu gateway transaction tidak boleh dimiliki dua payment
+  gatewayTransactionId String?       @unique
 
   status            PaymentStatus    @default(PENDING)
 
@@ -296,7 +308,6 @@ model Payment {
 
   @@index([status])
   @@index([orderId])
-  @@index([gatewayTransactionId])
 }
 
 // ============================================================

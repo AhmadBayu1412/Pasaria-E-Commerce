@@ -34,7 +34,8 @@ export interface InitiatePaymentResult {
   paymentId: number;
   orderId: number;
   redirectUrl: string;
-  gatewayTransactionId: string;
+  snapToken: string;
+  externalReference: string;
 }
 
 export interface InitiatePaymentInput extends CreatePaymentIntentInput {
@@ -126,13 +127,15 @@ export class PaymentHandler {
         amount: intentResult.amount,
         currency: intentResult.currency,
         returnUrl: input.returnUrl,
+        externalReference: intentResult.externalReference,
       });
 
     return {
       paymentId: intentResult.paymentId,
       orderId: intentResult.orderId,
-      redirectUrl: chargeResult.redirectUrl ?? '',
-      gatewayTransactionId: chargeResult.gatewayTransactionId,
+      redirectUrl: chargeResult.redirectUrl,
+      snapToken: chargeResult.snapToken,
+      externalReference: intentResult.externalReference,
     };
   }
 
@@ -145,6 +148,7 @@ export class PaymentHandler {
     orderId: number,
     amount: number,
     currency: string,
+    externalReference: string,
     returnUrl?: string,
   ): Promise<ChargeInitiatedResult> {
     return this.gatewayChargeService.initiateCharge({
@@ -153,6 +157,7 @@ export class PaymentHandler {
       amount,
       currency,
       returnUrl,
+      externalReference,
     });
   }
 }

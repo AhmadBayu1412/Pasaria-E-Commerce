@@ -8,7 +8,9 @@
 // - No gateway-specific types (Step 4+)
 // ============================================================
 
-import type { PaymentProvider } from './payment.types.js';
+// Import dari shared/config untuk type safety
+// Prisma enum PaymentProvider disalin karena tidak bisa diimport langsung
+export type PaymentProvider = 'STUB' | 'MIDTRANS' | 'XENDIT';
 
 // ----- Input -----
 export interface CreatePaymentIntentInput {
@@ -31,6 +33,7 @@ export interface PaymentIntentResultDTO {
   readonly currency: string;
   readonly provider: PaymentProvider;
   readonly status: 'READY_FOR_GATEWAY';
+  readonly externalReference: string;
 }
 
 // ----- Error Codes (Step 3 scope) -----

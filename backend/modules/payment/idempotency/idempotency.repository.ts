@@ -20,7 +20,6 @@ interface PrismaIdempotencyRecord {
   idempotencyKey: string;
   resourceType: string;
   resourceId: number | null;
-  requestHash: string | null;
   responseData: unknown;
   responseStatus: number;
   status: string;
@@ -35,7 +34,6 @@ function toRecord(prismaRecord: PrismaIdempotencyRecord): IdempotencyRecord {
     idempotencyKey: prismaRecord.idempotencyKey,
     resourceType: prismaRecord.resourceType as IdempotencyResourceType,
     resourceId: prismaRecord.resourceId,
-    requestHash: prismaRecord.requestHash,
     responseData: prismaRecord.responseData,
     responseStatus: prismaRecord.responseStatus,
     status: prismaRecord.status as IdempotencyRecordStatus,

@@ -42,7 +42,7 @@ export class GatewayChargeService {
 
     if (result.chargeStatus === 'FAILED') {
       throw new BusinessError(
-        `Charge creation failed: ${result.gatewayTransactionId}`,
+        `Charge creation failed: ${result.snapToken}`,
         502,
         GatewayChargeErrorCodes.GATEWAY_ERROR,
       );
@@ -50,7 +50,7 @@ export class GatewayChargeService {
 
     return {
       paymentId: input.paymentId,
-      gatewayTransactionId: result.gatewayTransactionId,
+      snapToken: result.snapToken,
       redirectUrl: result.redirectUrl,
       chargeCreatedAt: result.createdAt,
     };
@@ -63,6 +63,7 @@ export class GatewayChargeService {
       amount: input.amount,
       currency: input.currency,
       returnUrl: input.returnUrl,
+      externalReference: input.externalReference,
     };
   }
 

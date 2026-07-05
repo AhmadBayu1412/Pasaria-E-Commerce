@@ -14,6 +14,7 @@ describe('StubGateway', () => {
     amount: 100000,
     currency: 'IDR',
     returnUrl: 'https://example.com/return',
+    externalReference: 'PAY-1-100',
   });
 
   describe('successful charge creation', () => {
@@ -24,10 +25,11 @@ describe('StubGateway', () => {
       const result = await gateway.createCharge(request);
 
       expect(result.chargeStatus).toBe('CREATED');
-      expect(result.gatewayTransactionId).toMatch(/^STUB_\d+_1$/);
+      expect(result.snapToken).toMatch(/^STUB_\d+_1$/);
       expect(result.redirectUrl).toContain('stub-gateway.pasaria.test');
       expect(result.metadata.paymentId).toBe(1);
       expect(result.metadata.orderId).toBe(100);
+      expect(result.metadata.externalReference).toBe('PAY-1-100');
       expect(result.createdAt).toBeInstanceOf(Date);
     });
 
@@ -39,7 +41,7 @@ describe('StubGateway', () => {
       await new Promise((r) => setTimeout(r, 10));
       const result2 = await gateway.createCharge(request);
 
-      expect(result1.gatewayTransactionId).not.toBe(result2.gatewayTransactionId);
+      expect(result1.snapToken).not.toBe(result2.snapToken);
     });
 
     it('should handle request without returnUrl', async () => {
@@ -49,6 +51,7 @@ describe('StubGateway', () => {
         orderId: 100,
         amount: 100000,
         currency: 'IDR',
+        externalReference: 'PAY-1-100',
       };
 
       const result = await gateway.createCharge(request);

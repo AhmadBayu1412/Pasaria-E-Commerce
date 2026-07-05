@@ -14,9 +14,10 @@ describe('GatewayChargeService', () => {
   const createMockGateway = (overrides?: Partial<CreateChargeResult>): PaymentGateway => ({
     createCharge: vi.fn().mockResolvedValue({
       chargeStatus: 'CREATED',
-      gatewayTransactionId: 'TXN_123',
+      snapToken: 'SNAP_123',
       redirectUrl: 'https://gateway.test/pay/123',
-      metadata: { orderId: 100, paymentId: 1 },
+      externalReference: 'PAY-1-100',
+      metadata: { orderId: 100, paymentId: 1, externalReference: 'PAY-1-100' },
       createdAt: new Date(),
       ...overrides,
     }),
@@ -28,6 +29,7 @@ describe('GatewayChargeService', () => {
     amount: 100000,
     currency: 'IDR',
     returnUrl: 'https://example.com/return',
+    externalReference: 'PAY-1-100',
   });
 
   describe('initiateCharge', () => {
@@ -39,7 +41,7 @@ describe('GatewayChargeService', () => {
       const result = await service.initiateCharge(input);
 
       expect(result.paymentId).toBe(1);
-      expect(result.gatewayTransactionId).toBe('TXN_123');
+      expect(result.snapToken).toBe('SNAP_123');
       expect(result.redirectUrl).toBe('https://gateway.test/pay/123');
       expect(result.chargeCreatedAt).toBeInstanceOf(Date);
     });
@@ -58,6 +60,7 @@ describe('GatewayChargeService', () => {
         amount: 100000,
         currency: 'IDR',
         returnUrl: 'https://example.com/return',
+        externalReference: 'PAY-1-100',
       });
     });
 
@@ -171,15 +174,15 @@ describe('GatewayChargeService', () => {
     });
   });
 
-  describe('null redirectUrl handling', () => {
-    it('should return null redirectUrl from gateway', async () => {
-      const gateway = createMockGateway({ redirectUrl: null });
+  describe('redirectUrl handling', () => {
+    it('should return redirectUrl from gateway', async () => {
+      const gateway = createMockGateway({ redirectUrl: 'https://gateway.test/pay/456' });
       const service = new GatewayChargeService(gateway);
       const input = createValidInput();
 
       const result = await service.initiateCharge(input);
 
-      expect(result.redirectUrl).toBeNull();
+      expect(result.redirectUrl).toBe('https://gateway.test/pay/456');
     });
   });
 });

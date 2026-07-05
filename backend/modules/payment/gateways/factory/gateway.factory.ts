@@ -1,70 +1,58 @@
 // ============================================================
 // GATEWAY FACTORY
-// Phase 5 Step 4: Gateway Abstraction
+// Phase 5 Step 7: Factory Pattern for Gateway Creation
 //
 // Philosophy:
-// - Factory FOR BOOTSTRAP ONLY
-// - NOT a Service Locator
-// - Called ONLY at composition root / bootstrap
-// - Returns gateway instance for DI container
-//
-// Usage:
-//   // app.ts or bootstrap.ts
-//   const gateway = GatewayFactory.create();
-//   const service = new PaymentHandler(gateway);
-//
-// NOT in services:
-//   // PaymentHandler (WRONG)
-//   const gateway = GatewayFactory.create();
+// - Factory menerima GatewayConfig sebagai parameter
+// - Tidak baca process.env langsung (validasi di bootstrap)
+// - Base URL dari config, bukan hardcoded
+// - Business layer tidak melakukan `new MidtransGateway()`
 // ============================================================
 
 import type { PaymentGateway } from '../gateway.interface.js';
 import { StubGateway } from '../stub/stub.gateway.js';
+import { MidtransGateway } from '../midtrans/midtrans.gateway.js';
+import type { GatewayConfig, ProviderType } from '../../../../shared/config/gateway.config.js';
 
-export type ProviderType = 'stub' | 'midtrans' | 'xendit' | 'stripe';
-
+/**
+ * Gateway Factory
+ * 
+ * CHANGE v2:
+ * - Terima GatewayConfig sebagai parameter
+ * - Tidak baca process.env langsung
+ * - Base URL dari config, bukan hardcoded
+ */
 export const GatewayFactory = {
-  create(override?: ProviderType): PaymentGateway {
-    const provider = override ?? this.getProviderFromEnv();
+  /**
+   * Create gateway instance based on config
+   */
+  create(config: GatewayConfig): PaymentGateway {
+    switch (config.provider) {
+      case 'STUB':
+        return new StubGateway({ shouldSucceed: true });
 
-    switch (provider) {
-      case 'stub':
-        return new StubGateway({
-          shouldSucceed: true,
-          simulatedDelayMs: 0,
+      case 'MIDTRANS':
+        if (!config.midtrans) {
+          throw new Error('Midtrans configuration required');
+        }
+        return new MidtransGateway({
+          serverKey: config.midtrans.serverKey,
+          clientKey: config.midtrans.clientKey,
+          baseUrl: config.midtrans.baseUrl,
+          isProduction: config.isProduction,
         });
 
-      case 'midtrans':
-        throw new Error('Midtrans gateway not yet implemented (Step 7)');
-
-      case 'xendit':
-        throw new Error('Xendit gateway not yet implemented (Step 7)');
-
-      case 'stripe':
-        throw new Error('Stripe gateway not yet implemented (Step 7)');
+      case 'XENDIT':
+        // OUT OF SCOPE Step 7: Xendit implementation
+        throw new Error(
+          'Xendit gateway not yet implemented. See Phase 5 Step 7.x',
+        );
 
       default:
         console.warn(
-          `[GatewayFactory] Unknown provider "${provider}", falling back to StubGateway`,
+          `Unknown provider "${config.provider}", falling back to StubGateway`,
         );
         return new StubGateway();
     }
-  },
-
-  getProviderFromEnv(): ProviderType {
-    const env = process.env.PAYMENT_PROVIDER?.toLowerCase();
-
-    if (!env) {
-      return 'stub';
-    }
-
-    if (['stub', 'midtrans', 'xendit', 'stripe'].includes(env)) {
-      return env as ProviderType;
-    }
-
-    console.warn(
-      `[GatewayFactory] Invalid PAYMENT_PROVIDER="${env}", using "stub"`,
-    );
-    return 'stub';
   },
 } as const;

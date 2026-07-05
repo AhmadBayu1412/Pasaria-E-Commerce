@@ -144,7 +144,10 @@ export const PaymentIntentService = {
     // STEP 5: Execute atomic transaction (Invariant 2 + 3)
     // Atomic: Both Payment create AND Order update succeed or fail together
     const payment = await prisma.$transaction(async (tx) => {
-      // 5a: Create Payment record
+      // 5a: Get the next payment ID for externalReference
+      // Note: We use a temporary reference first, then update after creation
+      
+      // 5b: Create Payment record with temporary externalReference
       const newPayment = await tx.payment.create({
         data: {
           orderId: input.orderId,
@@ -153,16 +156,27 @@ export const PaymentIntentService = {
           currency: input.currency ?? 'IDR',
           provider: input.provider ?? 'STUB',
           status: 'PENDING',
+          externalReference: `PAY-PENDING-${Date.now()}`, // Will be updated
         },
       });
 
-      // 5b: Update Order status
+      // 5c: Generate proper externalReference with real paymentId
+      const externalReference = `PAY-${newPayment.id}-${input.orderId}`;
+      
+      // 5d: Update Payment with correct externalReference (unique)
+      // Note: Type assertion needed until Prisma client is regenerated
+      const updatedPayment = await tx.payment.update({
+        where: { id: newPayment.id },
+        data: { externalReference } as any,
+      });
+
+      // 5e: Update Order status
       await tx.order.update({
         where: { id: input.orderId },
         data: { status: 'WAITING_PAYMENT' },
       });
 
-      return newPayment;
+      return updatedPayment as any;
     });
 
     // STEP 6: Return DTO (not raw entity)
@@ -174,6 +188,7 @@ export const PaymentIntentService = {
       currency: payment.currency,
       provider: payment.provider,
       status: 'READY_FOR_GATEWAY',
+      externalReference: payment.externalReference,
     };
 
     // Future: Publish domain event

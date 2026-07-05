@@ -1,6 +1,6 @@
 // ============================================================
 // PAYMENT MODULE — Public API
-// Phase 5 Step 6: Webhook Processing & Payment Confirmation
+// Phase 5 Step 7: Real Gateway Integration
 // ============================================================
 
 // ----- Step 2: Payment Domain Foundation -----
@@ -32,13 +32,14 @@ export type {
 export { PaymentIntentErrorCodes } from './payment-intent.types.js';
 
 // ----- Step 4: Gateway Abstraction -----
-export { GatewayFactory, type ProviderType } from './gateways/factory/gateway.factory.js';
+export { GatewayFactory } from './gateways/factory/gateway.factory.js';
 export { StubGateway } from './gateways/stub/stub.gateway.js';
 export type { StubGatewayOptions } from './gateways/stub/stub.gateway.js';
 
 export type { PaymentGateway } from './gateways/gateway.interface.js';
 
 export type {
+  ProviderType,
   CreateChargeRequest,
   CreateChargeResult,
   ChargeMetadata,
@@ -46,6 +47,43 @@ export type {
 } from './gateways/gateway.types.js';
 
 export { PaymentGatewayError, type GatewayErrorType } from './gateways/gateway.errors.js';
+
+// ----- Step 7: HTTP Client & Retry Policy -----
+export {
+  HttpClient,
+  HttpClientError,
+  type HttpClientOptions,
+  type HttpRequest,
+  type HttpResponse,
+} from './client/http-client.js';
+
+export { GatewayClient, type GatewayClientConfig } from './client/gateway-client.js';
+
+// ----- Step 7: Midtrans Gateway -----
+export {
+  MidtransGateway,
+  MidtransClient,
+  MidtransMapper,
+  MidtransSignatureVerifier,
+  createMidtransSignature,
+  type MidtransGatewayConfig,
+} from './gateways/midtrans/index.js';
+
+export type {
+  MidtransSnapRequest,
+  MidtransSnapResponse,
+  MidtransTransactionStatus,
+  MidtransTransactionStatusEnum,
+} from './gateways/midtrans/midtrans.types.js';
+
+// ----- Step 7: Shared Config -----
+export {
+  loadGatewayConfig,
+  type GatewayConfig,
+  type MidtransConfig,
+  type XenditConfig,
+  type WebhookConfig,
+} from '../../shared/config/gateway.config.js';
 
 // ----- Integration Layer -----
 export { GatewayChargeService } from './gateway-charge.service.js';

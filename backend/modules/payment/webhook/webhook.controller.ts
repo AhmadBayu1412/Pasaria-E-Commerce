@@ -60,7 +60,8 @@ export class WebhookController {
   }
 
   private extractProvider(req: Request): GatewayProvider {
-    const provider = req.params.provider?.toUpperCase() as GatewayProvider;
+    const rawProvider = req.params.provider;
+    const provider = (Array.isArray(rawProvider) ? rawProvider[0] : rawProvider)?.toUpperCase() as GatewayProvider;
 
     if (!provider) {
       return 'STUB';

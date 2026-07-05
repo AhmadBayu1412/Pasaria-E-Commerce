@@ -18,6 +18,7 @@ vi.mock('../../../../modules/payment/payment-intent.service.js', () => ({
       currency: 'IDR',
       provider: 'STUB',
       status: 'READY_FOR_GATEWAY',
+      externalReference: 'PAY-1-100',
     }),
   },
 }));
@@ -41,9 +42,10 @@ describe('PaymentHandler', () => {
     mockGateway = {
       createCharge: vi.fn().mockResolvedValue({
         chargeStatus: 'CREATED',
-        gatewayTransactionId: 'TXN_123',
+        snapToken: 'SNAP_123',
         redirectUrl: 'https://gateway.test/pay/123',
-        metadata: { orderId: 100, paymentId: 1 },
+        externalReference: 'PAY-1-100',
+        metadata: { orderId: 100, paymentId: 1, externalReference: 'PAY-1-100' },
         createdAt: new Date(),
       }),
     };
@@ -65,7 +67,7 @@ describe('PaymentHandler', () => {
       expect(result.paymentId).toBe(1);
       expect(result.orderId).toBe(100);
       expect(result.redirectUrl).toBe('https://gateway.test/pay/123');
-      expect(result.gatewayTransactionId).toBe('TXN_123');
+      expect(result.snapToken).toBe('SNAP_123');
     });
 
     it('should call PaymentIntentService first', async () => {
@@ -107,6 +109,7 @@ describe('PaymentHandler', () => {
         amount: 100000,
         currency: 'IDR',
         returnUrl: 'https://example.com/return',
+        externalReference: 'PAY-1-100',
       });
     });
 
@@ -129,27 +132,6 @@ describe('PaymentHandler', () => {
         code: 'GATEWAY_ERROR',
       });
     });
-
-    it('should handle null redirectUrl', async () => {
-      mockGateway.createCharge = vi.fn().mockResolvedValue({
-        chargeStatus: 'CREATED',
-        gatewayTransactionId: 'TXN_456',
-        redirectUrl: null,
-        metadata: { orderId: 100, paymentId: 1 },
-        createdAt: new Date(),
-      });
-      const handler = new PaymentHandler(mockGateway);
-
-      const result = await handler.initiatePayment({
-        orderId: 100,
-        userId: 1,
-        amount: 100000,
-        currency: 'IDR',
-        idempotencyKey: 'test-key-123',
-      });
-
-      expect(result.redirectUrl).toBe('');
-    });
   });
 
   describe('initiateChargeOnly', () => {
@@ -161,24 +143,26 @@ describe('PaymentHandler', () => {
         100,
         100000,
         'IDR',
+        'PAY-1-100',
         'https://example.com/return',
       );
 
       expect(result.paymentId).toBe(1);
-      expect(result.gatewayTransactionId).toBe('TXN_123');
+      expect(result.snapToken).toBe('SNAP_123');
       expect(mockGateway.createCharge).toHaveBeenCalledWith({
         paymentId: 1,
         orderId: 100,
         amount: 100000,
         currency: 'IDR',
         returnUrl: 'https://example.com/return',
+        externalReference: 'PAY-1-100',
       });
     });
 
     it('should work without returnUrl', async () => {
       const handler = new PaymentHandler(mockGateway);
 
-      await handler.initiateChargeOnly(1, 100, 100000, 'IDR');
+      await handler.initiateChargeOnly(1, 100, 100000, 'IDR', 'PAY-1-100');
 
       expect(mockGateway.createCharge).toHaveBeenCalledWith({
         paymentId: 1,
@@ -186,6 +170,7 @@ describe('PaymentHandler', () => {
         amount: 100000,
         currency: 'IDR',
         returnUrl: undefined,
+        externalReference: 'PAY-1-100',
       });
     });
   });

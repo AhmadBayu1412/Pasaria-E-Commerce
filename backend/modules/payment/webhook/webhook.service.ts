@@ -134,7 +134,7 @@ export class WebhookService {
     }
 
     // Step 3: Try to acquire event (deduplication)
-    const { acquired, existingEvent } =
+    const { acquired, record: existingEvent } =
       await WebhookRepository.acquireEvent(
         payload.transactionId,
         provider,

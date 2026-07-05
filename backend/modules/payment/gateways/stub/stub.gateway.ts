@@ -44,15 +44,17 @@ export class StubGateway implements PaymentGateway {
       );
     }
 
-    const transactionId = `STUB_${Date.now()}_${request.paymentId}`;
+    const stubToken = `STUB_${Date.now()}_${request.paymentId}`;
 
     return {
       chargeStatus: 'CREATED',
-      gatewayTransactionId: transactionId,
-      redirectUrl: `https://stub-gateway.pasaria.test/pay/${transactionId}`,
+      snapToken: stubToken,
+      redirectUrl: `https://stub-gateway.pasaria.test/pay/${stubToken}`,
+      externalReference: request.externalReference,
       metadata: {
         orderId: request.orderId,
         paymentId: request.paymentId,
+        externalReference: request.externalReference,
       },
       createdAt: new Date(),
     };

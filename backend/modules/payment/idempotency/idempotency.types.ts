@@ -23,7 +23,6 @@ export interface IdempotencyRecord {
   readonly idempotencyKey: string;
   readonly resourceType: IdempotencyResourceType;
   readonly resourceId: number | null;
-  readonly requestHash: string | null; // Not used in Step 5
   readonly responseData: unknown;
   readonly responseStatus: number;
   readonly status: IdempotencyRecordStatus;

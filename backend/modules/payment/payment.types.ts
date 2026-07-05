@@ -25,8 +25,10 @@ export type PaymentProvider = 'STUB';
  * - SUCCESS/DECLINED/EXPIRED: Added for completeness, used in later steps
  */
 export type PaymentStatus =
-  | 'PENDING' // Intent created
+| 'PENDING' // Intent created
   | 'SUCCESS' // Payment confirmed (Step 6+)
+  | 'FAILED' // Payment failed (Step 6+)
+  | 'CANCELLED' // Payment cancelled by user (Step 6+)
   | 'DECLINED' // Gateway rejected (Step 6+)
   | 'EXPIRED'; // Timeout exceeded (Step 8+)
 

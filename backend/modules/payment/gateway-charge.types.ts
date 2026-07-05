@@ -14,13 +14,14 @@ export interface InitiateChargeInput {
   readonly amount: number;
   readonly currency: string;
   readonly returnUrl?: string;
+  readonly externalReference: string;
 }
 
 // ----- Result -----
 export interface ChargeInitiatedResult {
   readonly paymentId: number;
-  readonly gatewayTransactionId: string;
-  readonly redirectUrl: string | null;
+  readonly snapToken: string;
+  readonly redirectUrl: string;
   readonly chargeCreatedAt: Date;
 }
 
