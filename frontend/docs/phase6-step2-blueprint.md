@@ -1189,7 +1189,7 @@ function ToastItem({
     <div
       className={cn(
         'flex items-start gap-3 p-4 rounded-lg border shadow-lg',
-        'min-w-[320px] max-w-[420px]',
+        'min-w-[320px] max-w-105',
         bgStyles[toast.type],
         isExiting ? 'animate-slide-out-right' : 'animate-slide-in-right'
       )}

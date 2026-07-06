@@ -24,7 +24,7 @@ export function ProductCardImage({
   ).toString('base64')}`;
 
   return (
-    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-lg bg-secondary-100">
+    <div className="relative aspect-4/3 w-full overflow-hidden rounded-t-lg bg-secondary-100">
       <Image
         src={imageUrl}
         alt={product.name}

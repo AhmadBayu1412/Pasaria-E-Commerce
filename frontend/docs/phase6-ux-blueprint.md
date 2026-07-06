@@ -321,39 +321,149 @@ Neutral:    Background, text, borders
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [Logo]          [Search Bar            ]  [Cart Badge] [👤] │
+│ [Logo]  [Search Bar_________________]  [Wish] [Cart] [👤] │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐   │
+│  │                 HERO SECTION                         │   │
+│  │           Modern Gradient Background                 │   │
 │  │                                                     │   │
-│  │           HERO BANNER / PROMO SLIDER               │   │
+│  │    "Selamat Datang di Pasaria"                      │   │
+│  │    Marketplace tagline...                            │   │
 │  │                                                     │   │
+│  │    [Mulai Belanja →]  [Masuk / Daftar]            │   │
+│  │                                                     │   │
+│  │    🛡️ 100% Aman | 🚚 Pengiriman Cepat | 💬 24/7  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ~~~~~~~~~~~~~~ Wave Divider ~~~~~~~~~~~~~~~~~~~~~~~~~~~~   │
+│                                                             │
+│  KATEGORI POPULER                                          │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ │
+│  │  Icon  │ │  Icon  │ │  Icon  │ │  Icon  │ │  Icon  │ │
+│  │  Cat   │ │  Cat   │ │  Cat   │ │  Cat   │ │  Cat   │ │
+│  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ │
+│  [Lihat Semua Kategori →]                                  │
+│                                                             │
+│  MENGAPA PASARIA?                                          │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│  │  🛡️ Icon    │ │  🚚 Icon    │ │  💬 Icon    │       │
+│  │  Aman &     │ │  Pengiriman │ │  Layanan    │       │
+│  │  Terpercaya │ │  Cepat      │ │  24/7      │       │
+│  └──────────────┘ └──────────────┘ └──────────────┘       │
+│                                                             │
+│  STATISTICS                                                │
+│  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐                    │
+│  │ 1M+ │  │ 10K+│  │100K+│  │ 4.9 │                    │
+│  │User │  │Toko │  │Produk│  │Rating│                   │
+│  └─────┘  └─────┘  └─────┘  └─────┘                    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              CTA SECTION                            │   │
+│  │        Modern Gradient + Badge                      │   │
+│  │                                                     │   │
+│  │    "Mulai Belanja Sekarang"                        │   │
+│  │    [Lihat Produk →]                               │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                             │
-│  CATEGORIES                                                │
-│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐  │
-│  │  Icon  │ │  Icon  │ │  Icon  │ │  Icon  │ │  Icon  │  │
-│  │  Cat   │ │  Cat   │ │  Cat   │ │  Cat   │ │  Cat   │  │
-│  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘  │
-│                                                             │
-│  FEATURED PRODUCTS                                          │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │ Product  │ │ Product  │ │ Product  │ │ Product  │    │
-│  │   Card   │ │   Card   │ │   Card   │ │   Card   │    │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘    │
-│                                                             │
 ├─────────────────────────────────────────────────────────────┤
-│ Footer: Links | Contact | Social | Copyright               │
+│ [Logo] Contact Info | Social | Links | Company | Support  │
+│ Copyright © 2026 Pasaria                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Behaviors:**
 
-- Hero banner auto-slides every 5 seconds
-- Pause on hover
-- Category cards navigate to filtered catalog
-- Featured products show top 8 items
-- Quick add-to-cart on hover (desktop only)
+- Hero section: Decorative blur elements, gradient background, wave divider
+- Category cards: Hover effects (shadow elevation, gradient background, icon scale)
+- Features cards: Gradient hover, shadow transitions, decorative elements
+- Stats section: Real-time impressive numbers
+- CTA section: Modern gradient with pattern overlay
+- Footer: 5-column layout, contact icons, hover arrow animations
+
+**Design System:**
+
+```
+HERO:
+├── Background: gradient from-primary-600 via-primary-700 to-primary-900
+├── Decorative: blur circles, pattern overlay
+├── Wave: SVG divider (white fill)
+└── Trust badges: icon + text layout
+
+CATEGORIES:
+├── Cards: rounded-2xl, shadow-sm, border-secondary-100
+├── Hover: shadow-xl, border-primary-200, -translate-y-1
+├── Icon container: w-14 h-14, rounded-xl, bg-secondary-100
+└── Label: text-sm font-semibold
+
+FEATURES:
+├── Cards: rounded-3xl, p-8, shadow-sm
+├── Hover: shadow-2xl, border-primary-100
+├── Icon: w-16 h-16, gradient container, shadow
+└── Decorative: corner circles
+
+CTA:
+├── Background: gradient from-primary-600 via-primary-700 to-primary-900
+├── Badge: "Promo Spesial" with trophy icon
+└── Wave top: SVG divider (secondary-50 fill)
+```
+
+---
+
+### 4.1.1 Homepage Color System
+
+```
+PRIMARY PALETTE (Trust Blue):
+--primary-50:   #eff6ff
+--primary-100:  #dbeafe
+--primary-200:  #bfdbfe
+--primary-300:  #93c5fd
+--primary-400:  #60a5fa
+--primary-500:  #3b82f6
+--primary-600:  #2563eb  ← Primary action
+--primary-700:  #1d4ed8
+--primary-800:  #1e40af
+--primary-900:  #1e3a8a
+
+ACCENT PALETTE (Orange):
+--accent-orange-50:  #fff7ed
+--accent-orange-100: #ffedd5
+--accent-orange-400: #fb923c  ← Badge highlights
+--accent-orange-500: #f97316  ← Cart badge
+--accent-orange-600: #ea580c
+--accent-orange-700: #c2410c
+
+SEMANTIC TOKENS:
+--success:    #22c55e
+--warning:    #f59e0b
+--error:      #ef4444
+--info:       #3b82f6
+```
+
+---
+
+### 4.1.2 Homepage Animation Tokens
+
+```
+MICRO-INTERACTIONS:
+├── Button hover: scale + shadow (300ms ease)
+├── Icon scale: transform scale-110 (300ms)
+├── Card lift: -translate-y-1 (300ms ease)
+└── Arrow translate: translate-x-1 (200ms)
+
+GRADIENT ANIMATIONS:
+├── Card hover: opacity 0→100 for gradient background (300ms)
+├── Icon container: bg-secondary-100 → bg-primary-100 (300ms)
+└── Shadow: shadow-sm → shadow-xl (500ms)
+
+WAVE ANIMATIONS:
+├── Hero wave: fixed at bottom
+└── CTA wave: fixed at top (rotated)
+
+RESPECT prefers-reduced-motion:
+├── Disable blur animations
+├── Disable translate animations
+└── Keep opacity transitions only
+```
 
 ---
 
