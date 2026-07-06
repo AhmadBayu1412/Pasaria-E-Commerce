@@ -1,7 +1,14 @@
+/**
+ * Root Layout
+ *
+ * Base HTML structure with AuthProvider.
+ * Does NOT include Navbar/Footer - those are in (main) route group.
+ */
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar, Footer } from "@/components/layout";
+import { AuthProvider } from "@/components/features/auth/auth-provider";
 import { ToastContainer } from "@/components/ui";
 
 const geistSans = Geist({
@@ -27,12 +34,10 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen flex flex-col bg-slate-50">
-        <Navbar />
-        <main className="flex-1">
+        <AuthProvider>
           {children}
-        </main>
-        <Footer />
-        <ToastContainer />
+          <ToastContainer />
+        </AuthProvider>
       </body>
     </html>
   );

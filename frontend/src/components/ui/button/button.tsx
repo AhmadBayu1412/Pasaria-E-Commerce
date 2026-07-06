@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import type { ButtonProps } from './button.types';
+import type { ButtonVariant, ButtonSize } from './button.types';
 import { cn } from '@/lib/cn';
 
 // Spinner component for loading state
@@ -23,6 +23,39 @@ function Spinner({ className }: { className?: string }) {
   );
 }
 
+// Button as button props
+interface ButtonAsButtonProps {
+  as?: 'button';
+  href?: never;
+  target?: never;
+  rel?: never;
+}
+
+// Button as anchor props
+interface ButtonAsAnchorProps {
+  as: 'a';
+  href?: string;
+  target?: string;
+  rel?: string;
+}
+
+// Base button props
+interface BaseButtonProps {
+  children?: React.ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  isLoading?: boolean;
+  disabled?: boolean;
+  fullWidth?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  className?: string;
+  type?: 'button' | 'submit' | 'reset';
+  onClick?: () => void;
+}
+
+type ButtonProps = BaseButtonProps & (ButtonAsButtonProps | ButtonAsAnchorProps);
+
 /**
  * Button Component
  * 
@@ -41,7 +74,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       leftIcon,
       rightIcon,
       className,
-      ...props
+      type = 'button',
+      onClick,
+      as,
+      href,
+      target,
+      rel,
     },
     ref
   ) => {
@@ -93,8 +131,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     // If as="a", render as anchor
-    if (props.as === 'a') {
-      const { as: _omit, href, target, rel } = props as Extract<ButtonProps, { as: 'a' }>;
+    if (as === 'a') {
       return (
         <a
           ref={ref as React.Ref<HTMLAnchorElement>}
@@ -116,8 +153,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         </a>
       );
     }
-
-    const { as: _omit, type = 'button', onClick } = props as Extract<ButtonProps, { as?: 'button' }>;
 
     return (
       <button
