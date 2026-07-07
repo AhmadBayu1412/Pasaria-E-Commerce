@@ -21,10 +21,14 @@ export function SearchAutocomplete({
 }: SearchAutocompleteProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const listRef = useRef<HTMLDivElement>(null);
+  const prevSuggestionsLength = useRef(suggestions?.length ?? 0);
 
   // Reset selection when suggestions change
   useEffect(() => {
-    setSelectedIndex(-1);
+    if (suggestions?.length !== prevSuggestionsLength.current) {
+      setSelectedIndex(-1);
+      prevSuggestionsLength.current = suggestions?.length ?? 0;
+    }
   }, [suggestions]);
 
   // Keyboard navigation

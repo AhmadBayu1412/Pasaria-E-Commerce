@@ -1,77 +1,70 @@
-import type { SkeletonProps } from './skeleton.types';
+'use client';
+
 import { cn } from '@/lib/cn';
 
 /**
- * Skeleton Component
- * 
- * A placeholder loading component that shows a pulsing animation.
+ * Base Skeleton Primitive
+ * Bisa dirangkai untuk membuat skeleton kompleks
  */
-export function Skeleton({
-  variant = 'rect',
-  className,
-  ...props
-}: SkeletonProps) {
-  const variantStyles = {
-    rect: 'rounded-md',
-    circle: 'rounded-full',
-    text: 'rounded h-4',
-  };
+interface SkeletonProps {
+  className?: string;
+  variant?: 'text' | 'circular' | 'rectangular';
+  width?: string | number;
+  height?: string | number;
+}
 
+export function Skeleton({
+  className,
+  variant = 'rectangular',
+  width,
+  height,
+}: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse bg-secondary-200',
-        variantStyles[variant],
-        className
+        'animate-pulse bg-gray-200',
+        variant === 'circular' && 'rounded-full',
+        variant === 'rectangular' && 'rounded-lg',
+        className,
       )}
-      {...props}
+      style={{ width, height }}
     />
   );
 }
 
-// Preset skeletons
-Skeleton.Card = function SkeletonCard({ className }: { className?: string }) {
-  return (
-    <div className={cn('space-y-3', className)}>
-      <Skeleton className="aspect-square w-full" />
-      <Skeleton className="h-4 w-3/4" />
-      <Skeleton className="h-4 w-1/2" />
-    </div>
-  );
-};
-
-Skeleton.Text = function SkeletonText({
-  lines = 3,
+/**
+ * Primitive Skeletons - bisa reuse untuk berbagai card
+ */
+export function SkeletonText({
+  lines = 1,
   className,
 }: {
   lines?: number;
   className?: string;
 }) {
+  const widths = ['w-full', 'w-3/4', 'w-1/2', 'w-1/3'];
   return (
     <div className={cn('space-y-2', className)}>
       {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className="h-4"
-          style={{ width: i === lines - 1 ? '75%' : '100%' }}
-        />
+        <Skeleton key={i} className={widths[i % widths.length]} height={16} />
       ))}
     </div>
   );
-};
+}
 
-Skeleton.Avatar = function SkeletonAvatar({
-  size = 'md',
-  className,
+export function SkeletonAvatar({ size = 40 }: { size?: number }) {
+  return <Skeleton variant="circular" width={size} height={size} />;
+}
+
+export function SkeletonImage({
+  aspectRatio = 'square',
 }: {
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  aspectRatio?: 'square' | 'video' | 'portrait';
 }) {
-  const sizeStyles = {
-    sm: 'w-8 h-8',
-    md: 'w-12 h-12',
-    lg: 'w-16 h-16',
+  const aspectClasses = {
+    square: 'aspect-square',
+    video: 'aspect-video',
+    portrait: 'aspect-[3/4]',
   };
-
-  return <Skeleton className={cn('rounded-full', sizeStyles[size], className)} />;
-};
+  return <Skeleton className={aspectClasses[aspectRatio]} />;
+}

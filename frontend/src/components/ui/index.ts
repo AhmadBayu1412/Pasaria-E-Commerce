@@ -1,21 +1,46 @@
-// UI Components barrel export
+// UI Components Index
+// Phase 6 Step 10 - Production Polish
 
-// Form components
+// Button
 export { Button } from './button';
-export { Input } from './input';
-export { Badge } from './badge';
-export { Card } from './card';
-export { Spinner } from './spinner';
-export { Skeleton } from './skeleton';
-export { Modal } from './modal';
-export { ToastContainer } from './toast';
 
-// Types
-export type { ButtonProps, ButtonVariant, ButtonSize } from './button/button.types';
-export type { InputProps } from './input/input.types';
-export type { BadgeProps, BadgeVariant, BadgeSize } from './badge/badge.types';
-export type { CardProps, CardVariant, CardPadding, CardHeaderProps, CardBodyProps, CardFooterProps } from './card/card.types';
-export type { SpinnerProps, SpinnerSize } from './spinner/spinner.types';
-export type { SkeletonProps, SkeletonVariant } from './skeleton/skeleton.types';
-export type { ModalProps, ModalFooterProps, ModalSize } from './modal/modal.types';
-export type { ToastPosition } from './toast/toast.types';
+// Badge
+export { Badge } from './badge';
+
+// Input
+export { Input } from './input';
+
+// Card
+export { Card, CardHeader, CardContent, CardFooter } from './card';
+
+// Spinner
+export { Spinner } from './spinner';
+
+// Skeleton Components
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonAvatar,
+  SkeletonImage,
+  ProductCardSkeleton,
+  PageSkeleton,
+  TableSkeleton,
+  ListSkeleton,
+  FormSkeleton,
+  CartItemSkeleton,
+} from './skeleton';
+
+// Empty State
+export { EmptyState } from './empty-state';
+
+// Error State
+export { ErrorState } from './error-state';
+
+// Loading
+export { LoadingOverlay } from './loading';
+
+// Status
+export { StatusBadge } from './status';
+
+// Toast
+export { ToastContainer } from './toast';

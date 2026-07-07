@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useDebounce } from './use-debounce';
 import { searchService } from '@/services/search.service';
 import type { SearchSuggestion } from '@/types/search';
@@ -57,8 +57,10 @@ export function useSearchSuggestions({
     }
   }, [debouncedQuery]);
 
-  // Store the fetch function in ref
-  fetchRef.current = fetchSuggestions;
+  // Store the fetch function in ref (useLayoutEffect for synchronous updates)
+  useLayoutEffect(() => {
+    fetchRef.current = fetchSuggestions;
+  }, [fetchSuggestions]);
 
   useEffect(() => {
     if (enabled) {
