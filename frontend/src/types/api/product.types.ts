@@ -1,28 +1,32 @@
 // Product Types
+// Match backend ProductResponseDTO structure
 
 export interface ProductImage {
   id: number;
   url: string;
-  alt: string;
-  isPrimary: boolean;
-  order: number;
+  alt?: string;
+  isPrimary?: boolean;
 }
 
 export interface ProductInventory {
   stock: number;
-  reservedStock: number;
   availableStock: number;
+  reservedStock?: number;
 }
 
 export interface Product {
   id: number;
-  slug: string;
+  slug?: string;
   name: string;
   description: string;
   price: number;
-  active: boolean;
-  images: ProductImage[];
-  inventory: ProductInventory;
+  availableStock: number;
+  reservedStock?: number;
+  totalStock?: number;
+  sellerId?: number;
+  categoryId?: number;
+  images?: ProductImage[];
+  inventory?: ProductInventory;
   createdAt: string;
   updatedAt: string;
 }

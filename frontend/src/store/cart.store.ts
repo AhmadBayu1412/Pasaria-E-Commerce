@@ -14,8 +14,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CartItem, Cart, CheckoutPreview, ShippingOption, AddItemPayload } from './cart.types';
 
-// API Base URL - in production, this should come from env
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// API Base URL - use shared constant
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 interface CartState {
   // Core state - ONLY store what backend returns

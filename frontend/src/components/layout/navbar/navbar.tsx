@@ -1,10 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Container } from '@/components/layout/container';
 import { cn } from '@/lib/cn';
 import { useState } from 'react';
-import { Search, ShoppingCart, Menu, X, User, Heart, Package, Settings, LogOut } from 'lucide-react';
+import { Search, ShoppingCart, Menu, X, User, Heart, LogOut } from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
+import { useCartStore } from '@/store/cart.store';
+import { useUIStore } from '@/store/ui-store';
 
 /**
  * Navbar Component
@@ -19,6 +23,24 @@ export function Navbar({
   className?: string;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+
+  // Auth state
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.status === 'AUTHENTICATED');
+
+  // Cart badge count
+  const cartItemCount = useCartStore((state) => state.items.length);
+
+  // Handle search submit
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   return (
     <nav
@@ -53,14 +75,16 @@ export function Navbar({
           {/* Right Section */}
           <div className="flex items-center gap-2 md:gap-4">
             {/* Search Bar - Desktop */}
-            <div className="hidden lg:flex items-center relative">
+            <form onSubmit={handleSearch} className="hidden lg:flex items-center relative">
               <Search className="absolute left-3 w-4 h-4 text-secondary-400" />
               <input
                 type="text"
                 placeholder="Cari produk..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pl-10 pr-4 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
               />
-            </div>
+            </form>
 
             {/* Action Buttons */}
             <div className="flex items-center gap-1">
@@ -84,9 +108,11 @@ export function Navbar({
                 aria-label="Cart"
               >
                 <ShoppingCart className="w-5 h-5" />
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  0
-                </span>
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {cartItemCount > 99 ? '99+' : cartItemCount}
+                  </span>
+                )}
               </Link>
 
               {/* User Menu */}
@@ -114,14 +140,16 @@ export function Navbar({
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-secondary-100 animate-in slide-in-from-top-2 duration-200">
             {/* Mobile Search */}
-            <div className="relative mb-4">
+            <form onSubmit={handleSearch} className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary-400" />
               <input
                 type="text"
                 placeholder="Cari produk..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 text-sm bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
               />
-            </div>
+            </form>
 
             {/* Mobile Nav Links */}
             <div className="flex flex-col gap-1">

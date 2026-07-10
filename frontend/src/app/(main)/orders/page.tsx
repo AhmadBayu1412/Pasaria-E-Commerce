@@ -20,9 +20,9 @@ export default function OrdersPage() {
     try {
       const response = await orderService.getOrders(pageNum);
       orderStoreActions.setOrders(response.items, {
-        page: response.page,
-        totalPages: response.totalPages,
-        totalItems: response.total,
+        page: response.pagination.page,
+        totalPages: response.pagination.totalPages,
+        totalItems: response.pagination.totalItems,
       });
     } catch (err) {
       orderStoreActions.setError(handleOrderError(err));

@@ -1,6 +1,7 @@
 // ============================================================
 // ORDER ROUTES
 // Phase 4 Step 6: Order Draft Foundation
+// PEIA Audit: Added GET /orders and GET /orders/:id
 // ============================================================
 
 import { Router } from "express"
@@ -12,6 +13,53 @@ const router = Router()
 // ============================================================
 // ORDER ENDPOINTS
 // ============================================================
+
+/**
+ * GET /orders
+ *
+ * Get all orders for authenticated user (paginated)
+ *
+ * Query Parameters:
+ * - page: number (default: 1)
+ * - limit: number (default: 10, max: 100)
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "items": Order[],
+ *     "pagination": { page, limit, totalItems, totalPages }
+ *   }
+ * }
+ */
+router.get(
+  "/",
+  authenticate,
+  OrderController.getOrders
+)
+
+/**
+ * GET /orders/:id
+ *
+ * Get specific order by ID
+ * Only accessible by order owner or admin
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": { "order": Order }
+ * }
+ *
+ * Errors:
+ * - 401 Unauthorized
+ * - 403 Forbidden (not owner)
+ * - 404 Not Found
+ */
+router.get(
+  "/:id",
+  authenticate,
+  OrderController.getOrderById
+)
 
 /**
  * POST /orders/draft

@@ -7,7 +7,7 @@
 
 import type { Cart, CartItem, AddItemPayload, CheckoutPreview, ShippingOption, Address } from '@/store/cart.types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { API_BASE_URL } from '@/lib/constants';
 
 interface CartApiResponse {
   success: boolean;
@@ -59,10 +59,11 @@ class CartService {
 
   /**
    * Add item to cart
+   * Endpoint: POST /cart/items
    */
   async addItem(payload: AddItemPayload): Promise<CartApiResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/cart`, {
+      const response = await fetch(`${API_BASE_URL}/cart/items`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -87,10 +88,11 @@ class CartService {
 
   /**
    * Update item quantity
+   * Endpoint: PATCH /cart/items/:productId
    */
-  async updateQuantity(itemId: string, quantity: number): Promise<CartApiResponse> {
+  async updateQuantity(productId: string, quantity: number): Promise<CartApiResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/cart/${itemId}`, {
+      const response = await fetch(`${API_BASE_URL}/cart/items/${productId}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: {
@@ -115,10 +117,11 @@ class CartService {
 
   /**
    * Remove item from cart
+   * Endpoint: DELETE /cart/items/:productId
    */
-  async removeItem(itemId: string): Promise<CartApiResponse> {
+  async removeItem(productId: string): Promise<CartApiResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/cart/${itemId}`, {
+      const response = await fetch(`${API_BASE_URL}/cart/items/${productId}`, {
         method: 'DELETE',
         credentials: 'include',
         headers: {

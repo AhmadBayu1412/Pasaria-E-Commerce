@@ -1,10 +1,11 @@
 /**
  * Order Service
  * HTTP calls for order management
+ * PEIA Audit: Fixed to match backend endpoints
  */
 
 import apiClient from './api-client';
-import type { Order, PaginatedResponse } from '@/types/api';
+import type { Order } from '@/types/api';
 
 /**
  * Order Error Codes
@@ -51,27 +52,54 @@ export function getOrderErrorMessage(error: OrderError): string {
   return ORDER_ERROR_MESSAGES[error];
 }
 
+// Backend response type (wraps data in { data: { items, pagination } })
+interface BackendOrdersResponse {
+  success: boolean;
+  data: {
+    items: Order[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+    };
+  };
+}
+
+// Backend order detail response (wraps data in { data: { order } })
+interface BackendOrderDetailResponse {
+  success: boolean;
+  data: {
+    order: Order;
+  };
+}
+
 export const orderService = {
   /**
    * Get user's orders (paginated)
+   * Endpoint: GET /orders
    */
   async getOrders(
     page: number = 1,
     limit: number = 10,
-  ): Promise<PaginatedResponse<Order>> {
-    const response = await apiClient.get<PaginatedResponse<Order>>('/orders', {
+  ): Promise<{ items: Order[]; pagination: { page: number; limit: number; totalItems: number; totalPages: number } }> {
+    const response = await apiClient.get<BackendOrdersResponse>('/orders', {
       params: { page, limit },
     });
-    return response.data;
+
+    // Transform to match frontend expected format
+    return {
+      items: response.data.data.items,
+      pagination: response.data.data.pagination,
+    };
   },
 
   /**
    * Get order by ID
+   * Endpoint: GET /orders/:id
    */
   async getOrderById(orderId: number): Promise<Order> {
-    const response = await apiClient.get<{ order: Order }>(
-      `/orders/${orderId}`,
-    );
-    return response.data.order;
+    const response = await apiClient.get<BackendOrderDetailResponse>(`/orders/${orderId}`);
+    return response.data.data.order;
   },
 };

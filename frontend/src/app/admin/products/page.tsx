@@ -5,7 +5,7 @@ import { DataTable, type Column } from '@/components/ui/data-table';
 import { formatCurrency } from '@/lib/utils/currency';
 import type { Product } from '@/types/api';
 
-// Static mock data
+// Static mock data - TODO: Replace with API call
 const products: Product[] = [
   {
     id: 1,
@@ -13,9 +13,8 @@ const products: Product[] = [
     name: 'Produk A',
     description: 'Deskripsi produk A',
     price: 125000,
-    active: true,
+    availableStock: 8,
     images: [],
-    inventory: { stock: 10, reservedStock: 2, availableStock: 8 },
     createdAt: '2026-07-06T00:00:00.000Z',
     updatedAt: '2026-07-06T00:00:00.000Z',
   },
@@ -25,9 +24,8 @@ const products: Product[] = [
     name: 'Produk B',
     description: 'Deskripsi produk B',
     price: 250000,
-    active: true,
+    availableStock: 5,
     images: [],
-    inventory: { stock: 5, reservedStock: 0, availableStock: 5 },
     createdAt: '2026-07-05T00:00:00.000Z',
     updatedAt: '2026-07-05T00:00:00.000Z',
   },
@@ -37,9 +35,8 @@ const products: Product[] = [
     name: 'Produk C',
     description: 'Deskripsi produk C',
     price: 75000,
-    active: false,
+    availableStock: 0,
     images: [],
-    inventory: { stock: 0, reservedStock: 0, availableStock: 0 },
     createdAt: '2026-07-04T00:00:00.000Z',
     updatedAt: '2026-07-04T00:00:00.000Z',
   },
@@ -65,24 +62,27 @@ export default function AdminProductsPage() {
       render: (product) => formatCurrency(product.price),
     },
     {
-      key: 'inventory',
+      key: 'availableStock',
       header: 'Stok',
       render: (product) => {
-        const stock = product.inventory.availableStock;
+        const stock = product.availableStock;
         const variant = stock === 0 ? 'text-red-600' : stock < 5 ? 'text-yellow-600' : 'text-green-600';
         return <span className={variant}>{stock}</span>;
       },
     },
     {
-      key: 'active',
+      key: 'status',
       header: 'Status',
-      render: (product) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          product.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-        }`}>
-          {product.active ? 'Aktif' : 'Nonaktif'}
-        </span>
-      ),
+      render: (product) => {
+        const isActive = product.availableStock > 0;
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs ${
+            isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+          }`}>
+            {isActive ? 'Aktif' : 'Nonaktif'}
+          </span>
+        );
+      },
     },
     {
       key: 'actions',

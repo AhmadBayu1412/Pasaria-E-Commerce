@@ -102,4 +102,127 @@ export const OrderController = {
     // Re-throw non-BusinessError for global error handler
     throw error
   },
+
+  // ============================================================
+  // ADDITIONAL ORDER ENDPOINTS (from PEIA audit)
+  // ============================================================
+
+  /**
+   * GET /orders
+   *
+   * Get all orders for the authenticated user
+   * Supports pagination
+   */
+  async getOrders(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user as AuthenticatedUser | undefined
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
+        })
+        return
+      }
+
+      // Pagination params
+      const page = parseInt(req.query.page as string, 10) || 1
+      const limit = Math.min(parseInt(req.query.limit as string, 10) || 10, 100)
+      const skip = (page - 1) * limit
+
+      // Get orders from service
+      const { OrderService } = await import("./order.service.js")
+      const allOrders = await OrderService.getOrdersByUser(user.id)
+
+      // Apply pagination
+      const paginatedOrders = allOrders.slice(skip, skip + limit)
+
+      res.status(200).json({
+        success: true,
+        data: {
+          items: paginatedOrders,
+          pagination: {
+            page,
+            limit,
+            totalItems: allOrders.length,
+            totalPages: Math.ceil(allOrders.length / limit),
+          },
+        },
+      })
+    } catch (error) {
+      OrderController.handleError(error, res)
+    }
+  },
+
+  /**
+   * GET /orders/:id
+   *
+   * Get a specific order by ID
+   * Only accessible by the order owner or admin
+   */
+  async getOrderById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user as AuthenticatedUser | undefined
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
+        })
+        return
+      }
+
+      // Parse order ID
+      const orderIdStr = req.params.id
+      const orderId = parseInt(Array.isArray(orderIdStr) ? orderIdStr[0] : orderIdStr, 10)
+      if (isNaN(orderId) || orderId <= 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid order ID",
+          },
+        })
+        return
+      }
+
+      // Get order from service
+      const { OrderService } = await import("./order.service.js")
+      const order = await OrderService.getOrder(orderId)
+
+      if (!order) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: "ORDER_NOT_FOUND",
+            message: "Order not found",
+          },
+        })
+        return
+      }
+
+      // Check ownership (unless admin)
+      if (order.userId !== user.id && user.role !== "ADMIN") {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "You do not have permission to view this order",
+          },
+        })
+        return
+      }
+
+      res.status(200).json({
+        success: true,
+        data: { order },
+      })
+    } catch (error) {
+      OrderController.handleError(error, res)
+    }
+  },
 } as const
