@@ -9,14 +9,22 @@ import type {
 } from '@/types/api';
 
 // Backend response types - match actual backend structure
+interface BackendProductImage {
+  id: number;
+  url: string;
+  filename: string;
+  mimeType: string;
+  isPrimary: boolean;
+}
+
 interface BackendProductResponse {
   success: boolean;
-  data: Product;
+  data: Product & { images: BackendProductImage[] };
 }
 
 interface BackendProductsResponse {
   success: boolean;
-  data: Product[]; // Backend returns array directly, not wrapped in { items }
+  data: (Product & { images: BackendProductImage[] })[];
   pagination: {
     page: number;
     limit: number;
@@ -27,7 +35,7 @@ interface BackendProductsResponse {
 
 interface BackendSearchResponse {
   success: boolean;
-  data: Product[];
+  data: (Product & { images: BackendProductImage[] })[];
   pagination: {
     page: number;
     limit: number;
@@ -56,14 +64,21 @@ export const productService = {
     });
 
     // Transform backend response to frontend expected format
-    const items = response.data.data.map((p) => ({
-      id: p.id,
-      slug: String(p.id), // Backend may not have slug
-      name: p.name,
-      price: p.price,
-      primaryImage: null, // Backend may not return images
-      isAvailable: p.availableStock > 0,
-    }));
+    const items = response.data.data.map((p) => {
+      // Get primary image or first image
+      const primaryImage = p.images?.find(img => img.isPrimary)?.url
+        || p.images?.[0]?.url
+        || null;
+
+      return {
+        id: p.id,
+        slug: String(p.id),
+        name: p.name,
+        price: p.price,
+        primaryImage,
+        isAvailable: p.availableStock > 0,
+      };
+    });
 
     return {
       items,
@@ -80,14 +95,20 @@ export const productService = {
       params: { q: query },
     });
 
-    const items = response.data.data.map((p) => ({
-      id: p.id,
-      slug: String(p.id),
-      name: p.name,
-      price: p.price,
-      primaryImage: null,
-      isAvailable: p.availableStock > 0,
-    }));
+    const items = response.data.data.map((p) => {
+      const primaryImage = p.images?.find(img => img.isPrimary)?.url
+        || p.images?.[0]?.url
+        || null;
+
+      return {
+        id: p.id,
+        slug: String(p.id),
+        name: p.name,
+        price: p.price,
+        primaryImage,
+        isAvailable: p.availableStock > 0,
+      };
+    });
 
     return {
       items,
@@ -99,7 +120,7 @@ export const productService = {
    * Get product by ID
    * Endpoint: GET /products/:id
    */
-  async getProductById(id: number): Promise<Product> {
+  async getProductById(id: number): Promise<Product & { images: BackendProductImage[] }> {
     const response = await apiClient.get<BackendProductResponse>(`/products/${id}`);
     return response.data.data;
   },
@@ -108,7 +129,7 @@ export const productService = {
    * Get product by slug
    * Endpoint: GET /products/:id (backend accepts slug as id)
    */
-  async getProductBySlug(slug: string): Promise<Product> {
+  async getProductBySlug(slug: string): Promise<Product & { images: BackendProductImage[] }> {
     const response = await apiClient.get<BackendProductResponse>(`/products/${slug}`);
     return response.data.data;
   },

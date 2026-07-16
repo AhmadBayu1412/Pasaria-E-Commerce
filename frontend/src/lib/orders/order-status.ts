@@ -1,6 +1,7 @@
 /**
  * Order Status Definition
  * Single Source of Truth for all order status display
+ * Updated with complete lifecycle: Phase 5 Step 1
  */
 
 import type { OrderStatus } from '@/types/api';
@@ -25,6 +26,7 @@ export interface StatusConfig {
 
 /**
  * Order Status Configuration
+ * Complete lifecycle: DRAFT → COMPLETED
  */
 export const ORDER_STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
   DRAFT: {
@@ -35,7 +37,7 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
     showTimeline: true,
     order: 0,
   },
-  PENDING: {
+  WAITING_PAYMENT: {
     label: 'Menunggu Pembayaran',
     level: 'WARNING',
     icon: 'clock',
@@ -51,18 +53,50 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
     showTimeline: true,
     order: 2,
   },
-  CANCELLED: {
-    label: 'Dibatalkan',
-    level: 'ERROR',
-    icon: 'x-circle',
+  PROCESSING: {
+    label: 'Sedang Diproses',
+    level: 'INFO',
+    icon: 'package',
+    isFinal: false,
+    showTimeline: true,
+    order: 3,
+  },
+  SHIPPING: {
+    label: 'Sedang Dikirim',
+    level: 'INFO',
+    icon: 'truck',
+    isFinal: false,
+    showTimeline: true,
+    order: 4,
+  },
+  DELIVERED: {
+    label: 'Telah Tiba',
+    level: 'SUCCESS',
+    icon: 'package-check',
+    isFinal: false,
+    showTimeline: true,
+    order: 5,
+  },
+  COMPLETED: {
+    label: 'Selesai',
+    level: 'SUCCESS',
+    icon: 'check-circle-2',
     isFinal: true,
     showTimeline: true,
-    order: 99,
+    order: 6,
   },
   EXPIRED: {
     label: 'Kedaluwarsa',
     level: 'WARNING',
     icon: 'alert-circle',
+    isFinal: true,
+    showTimeline: true,
+    order: 99,
+  },
+  CANCELLED: {
+    label: 'Dibatalkan',
+    level: 'ERROR',
+    icon: 'x-circle',
     isFinal: true,
     showTimeline: true,
     order: 100,
@@ -78,15 +112,26 @@ export function getStatusConfig(status: OrderStatus): StatusConfig {
 
 /**
  * Get timeline steps
+ * Shows the full order lifecycle
  */
 export function getTimelineSteps(status: OrderStatus): StatusConfig[] {
-  const linearSteps: OrderStatus[] = ['DRAFT', 'PENDING', 'PAID'];
+  // Complete lifecycle order
+  const linearSteps: OrderStatus[] = [
+    'DRAFT',
+    'WAITING_PAYMENT',
+    'PAID',
+    'PROCESSING',
+    'SHIPPING',
+    'DELIVERED',
+    'COMPLETED',
+  ];
 
   const currentIndex = linearSteps.indexOf(status);
 
   if (currentIndex === -1) {
+    // Handle terminal states
     if (status === 'CANCELLED' || status === 'EXPIRED') {
-      return [ORDER_STATUS_CONFIG['PENDING'], ORDER_STATUS_CONFIG[status]];
+      return [ORDER_STATUS_CONFIG['WAITING_PAYMENT'], ORDER_STATUS_CONFIG[status]];
     }
     return [];
   }
@@ -107,14 +152,24 @@ export interface OrderAction {
 }
 
 export const ORDER_ACTIONS: Record<OrderStatus, OrderAction[]> = {
-  DRAFT: [],
-  PENDING: [
+  DRAFT: [
+    { id: 'checkout', label: 'Lanjutkan Pembayaran', variant: 'primary' },
+    { id: 'cancel', label: 'Batalkan', variant: 'danger' },
+  ],
+  WAITING_PAYMENT: [
     { id: 'pay', label: 'Bayar Sekarang', variant: 'primary' },
     { id: 'cancel', label: 'Batalkan', variant: 'danger' },
   ],
   PAID: [{ id: 'invoice', label: 'Lihat Invoice', variant: 'secondary' }],
-  CANCELLED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
+  PROCESSING: [{ id: 'track', label: 'Lacak Pesanan', variant: 'secondary' }],
+  SHIPPING: [{ id: 'track', label: 'Lacak Pengiriman', variant: 'secondary' }],
+  DELIVERED: [
+    { id: 'confirm', label: 'Konfirmasi Terima', variant: 'primary' },
+    { id: 'complaint', label: 'Keluhan', variant: 'secondary' },
+  ],
+  COMPLETED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
   EXPIRED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
+  CANCELLED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
 };
 
 /**

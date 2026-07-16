@@ -1,12 +1,11 @@
 /**
  * Cart Service
- * 
+ *
  * Direct consumer of Express API (no Next.js API Routes).
  * Following blueprint: Frontend as consumer, backend as source of truth.
  */
 
 import type { Cart, CartItem, AddItemPayload, CheckoutPreview, ShippingOption, Address } from '@/store/cart.types';
-
 import { API_BASE_URL } from '@/lib/constants';
 
 interface CartApiResponse {
@@ -23,6 +22,23 @@ interface CheckoutPreviewResponse {
 interface ShippingOptionsResponse {
   success: boolean;
   options?: ShippingOption[];
+}
+
+interface PaymentMethodResponse {
+  id: string;
+  name: string;
+  type: string;
+  provider: string;
+  icon: string;
+  description: string;
+  fee: number;
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+interface PaymentMethodsResponse {
+  success: boolean;
+  methods?: PaymentMethodResponse[];
 }
 
 interface AddressesResponse {
@@ -43,6 +59,12 @@ class CartService {
         },
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for cart');
+        return { success: true, cart: undefined };
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -59,7 +81,6 @@ class CartService {
 
   /**
    * Add item to cart
-   * Endpoint: POST /cart/items
    */
   async addItem(payload: AddItemPayload): Promise<CartApiResponse> {
     try {
@@ -73,7 +94,13 @@ class CartService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Don't throw - return error response instead
+        const errorText = await response.text().catch(() => '');
+        console.error(`CartService.addItem failed: ${response.status}`, errorText);
+        return {
+          success: false,
+          message: `Failed to add item: ${response.status}`,
+        };
       }
 
       return await response.json();
@@ -88,7 +115,6 @@ class CartService {
 
   /**
    * Update item quantity
-   * Endpoint: PATCH /cart/items/:productId
    */
   async updateQuantity(productId: string, quantity: number): Promise<CartApiResponse> {
     try {
@@ -101,7 +127,18 @@ class CartService {
         body: JSON.stringify({ quantity }),
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for cart update');
+        return { success: true }; // Allow local update
+      }
+
       if (!response.ok) {
+        // 404 is acceptable - item might not exist in backend yet
+        if (response.status === 404) {
+          console.warn(`Item ${productId} not found in backend cart for update`);
+          return { success: true }; // Allow local update
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -117,7 +154,6 @@ class CartService {
 
   /**
    * Remove item from cart
-   * Endpoint: DELETE /cart/items/:productId
    */
   async removeItem(productId: string): Promise<CartApiResponse> {
     try {
@@ -129,7 +165,18 @@ class CartService {
         },
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for cart removal');
+        return { success: true }; // Allow local removal
+      }
+
       if (!response.ok) {
+        // 404 is acceptable - item might not exist in backend
+        if (response.status === 404) {
+          console.warn(`Item ${productId} not found in backend cart`);
+          return { success: true }; // Return success to allow local removal
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -156,6 +203,12 @@ class CartService {
         },
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for cart clear');
+        return { success: true }; // Allow local clear
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -171,28 +224,43 @@ class CartService {
   }
 
   /**
-   * Get checkout preview (from backend as source of truth)
+   * Initiate checkout - get checkout preview
+   * Endpoint: POST /checkout
    */
-  async getCheckoutPreview(addressId?: string): Promise<CheckoutPreviewResponse> {
+  async initiateCheckout(): Promise<CheckoutPreviewResponse> {
     try {
-      const url = addressId
-        ? `${API_BASE_URL}/checkout/preview?address_id=${addressId}`
-        : `${API_BASE_URL}/checkout/preview`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/checkout`, {
+        method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for checkout');
+        return { success: false, preview: undefined };
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      // Transform backend response to frontend format
+      return {
+        success: true,
+        preview: data.data ? {
+          items: data.data.items || [],
+          subtotal: data.data.summary?.subtotal || 0,
+          shipping: 0,
+          total: data.data.summary?.subtotal || 0,
+          validUntil: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        } : undefined,
+      };
     } catch (error) {
-      console.error('CartService.getCheckoutPreview error:', error);
+      console.error('CartService.initiateCheckout error:', error);
       return {
         success: false,
       };
@@ -200,26 +268,126 @@ class CartService {
   }
 
   /**
-   * Get shipping options
+   * Complete checkout
+   * Endpoint: POST /checkout/complete
    */
-  async getShippingOptions(addressId: string): Promise<ShippingOptionsResponse> {
+  async completeCheckout(): Promise<{ success: boolean; orderId?: number; message?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/shipping?address_id=${addressId}`, {
+      const response = await fetch(`${API_BASE_URL}/checkout/complete`, {
+        method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for checkout complete');
+        return { success: false, message: 'Silakan login terlebih dahulu' };
+      }
+
+      // Handle cart empty error gracefully
+      if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('Checkout failed:', errorData.error?.message || 'Cart is empty');
+        return {
+          success: false,
+          message: errorData.error?.message || 'Keranjang kosong atau sudah diproses'
+        };
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('Checkout failed:', errorData.error?.message || `HTTP error! status: ${response.status}`);
+        return {
+          success: false,
+          message: errorData.error?.message || 'Gagal menyelesaikan checkout'
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        orderId: data.data?.orderId,
+      };
+    } catch (error) {
+      console.error('CartService.completeCheckout error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Gagal menyelesaikan checkout',
+      };
+    }
+  }
+
+  /**
+   * Get shipping options
+   */
+  async getShippingOptions(): Promise<ShippingOptionsResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/shipping`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for shipping options');
+        return { success: false, options: [] };
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return {
+        success: data.success,
+        options: data.data || [],
+      };
     } catch (error) {
       console.error('CartService.getShippingOptions error:', error);
       return {
         success: false,
+        options: [],
+      };
+    }
+  }
+
+  /**
+   * Get payment methods
+   */
+  async getPaymentMethods(): Promise<PaymentMethodsResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/methods`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for payment methods');
+        return { success: false, methods: [] };
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: data.success,
+        methods: data.data || [],
+      };
+    } catch (error) {
+      console.error('CartService.getPaymentMethods error:', error);
+      return {
+        success: false,
+        methods: [],
       };
     }
   }
@@ -236,75 +404,182 @@ class CartService {
         },
       });
 
+      // Handle 401 gracefully - user not logged in
+      if (response.status === 401) {
+        console.warn('User not authenticated for addresses');
+        return {
+          success: false,
+          addresses: [],
+        };
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      // Backend returns { success: true, data: addresses }
+      // Transform to frontend format: { success: true, addresses: [...] }
+      return {
+        success: data.success,
+        addresses: data.data || [],
+      };
     } catch (error) {
       console.error('CartService.getAddresses error:', error);
       return {
         success: false,
+        addresses: [],
       };
     }
   }
 
   /**
-   * Merge guest cart on login
+   * Add new address
    */
-  async mergeCart(guestId: string): Promise<CartApiResponse> {
+  async addAddress(address: {
+    label?: string;
+    recipientName: string;
+    phone: string;
+    address: string;
+    city: string;
+    province?: string;
+    postalCode?: string;
+  }): Promise<{ success: boolean; address?: Address; message?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/cart/merge`, {
+      const response = await fetch(`${API_BASE_URL}/addresses`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ guest_id: guestId }),
+        body: JSON.stringify(address),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      // Backend returns { success: true, data: { address fields } }
+      // Transform to frontend format: { success: true, address: { address fields } }
+      return {
+        success: data.success,
+        address: data.data,
+      };
     } catch (error) {
-      console.error('CartService.mergeCart error:', error);
+      console.error('CartService.addAddress error:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to merge cart',
+        message: error instanceof Error ? error.message : 'Failed to add address',
       };
     }
   }
 
   /**
-   * Create order
+   * Update address
    */
-  async createOrder(payload: {
-    addressId: string;
-    shippingMethodId: string;
-    notes?: string;
-  }): Promise<{ success: boolean; orderId?: string; message?: string }> {
+  async updateAddress(id: string, address: Partial<{
+    label: string;
+    recipientName: string;
+    phone: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    isDefault: boolean;
+  }>): Promise<{ success: boolean; address?: Address; message?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const response = await fetch(`${API_BASE_URL}/addresses/${id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(address),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Backend returns { success: true, data: { address fields } }
+      // Transform to frontend format: { success: true, address: { address fields } }
+      return {
+        success: data.success,
+        address: data.data,
+      };
+    } catch (error) {
+      console.error('CartService.updateAddress error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update address',
+      };
+    }
+  }
+
+  /**
+   * Delete address
+   */
+  async deleteAddress(id: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/addresses/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      console.error('CartService.deleteAddress error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to delete address',
+      };
+    }
+  }
+
+  /**
+   * Set address as default
+   */
+  async setDefaultAddress(id: string): Promise<{ success: boolean; address?: Address; message?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/addresses/${id}/default`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      // Backend returns { success: true, data: { address fields } }
+      // Transform to frontend format: { success: true, address: { address fields } }
+      return {
+        success: data.success,
+        address: data.data,
+      };
     } catch (error) {
-      console.error('CartService.createOrder error:', error);
+      console.error('CartService.setDefaultAddress error:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to create order',
+        message: error instanceof Error ? error.message : 'Failed to set default address',
       };
     }
   }

@@ -1,8 +1,9 @@
 import dotenv from 'dotenv'
 dotenv.config()
- 
+
 import express from "express"
 import cookieParser from "cookie-parser"
+import cors from "cors"
 
 import { prisma } from "./infra/db/prisma"
 import { redis } from "./infra/cache/redis"
@@ -38,6 +39,15 @@ import checkoutRoutes from "./modules/checkout/checkout.routes.js"
 // Phase 4 - Step 6: Order
 import orderRoutes from "./modules/order/order.routes.js"
 
+// Address Routes
+import addressRoutes from "./modules/address/address.routes.js"
+
+// Shipping Routes
+import shippingRoutes from "./modules/shipping/shipping.routes.js"
+
+// Payment Methods Routes
+import paymentMethodsRoutes from "./modules/payment/payment-methods.routes.js"
+
 const app = express()
 const port = Number(process.env.PORT) || 3000
 
@@ -51,7 +61,17 @@ app.set("trust proxy", Number(process.env.TRUST_PROXY_COUNT) || 1)
 // 1. Security headers (Helmet) - FIRST
 app.use(helmetMiddleware())
 
-// 2. Cookie parser (untuk CSRF + session)
+// 2. CORS - Allow credentials for frontend cookie-based auth
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'];
+
+app.use(cors({
+  origin: corsOrigins,
+  credentials: true,
+}));
+
+// 3. Cookie parser (untuk CSRF + session)
 app.use(cookieParser())
 
 // 3. Body parsers
@@ -125,6 +145,15 @@ app.use("/checkout", checkoutRoutes)
 
 // Phase 4 - Step 6: Order
 app.use("/orders", orderRoutes)
+
+// Address Routes
+app.use("/addresses", addressRoutes)
+
+// Shipping Routes
+app.use("/shipping", shippingRoutes)
+
+// Payment Methods Routes
+app.use("/payments", paymentMethodsRoutes)
 
 // ============ ERROR HANDLING ============
 app.use(notFound)

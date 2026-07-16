@@ -3,6 +3,7 @@
 // Phase 4 Step 5: Checkout Orchestration Foundation
 // Phase 4 Step 6: Expanded Preview with Product Snapshot
 // Phase 4 Step 7: Complete Checkout Transaction
+// Phase 5 Step 1: Added shipping & tax to CheckoutPreview
 //
 // Philosophy:
 // - Application Service contract (not Domain Service)
@@ -23,6 +24,16 @@ export interface CompleteCheckoutInput {
   readonly userId: number;
 }
 
+// ----- Shipping Info -----
+export interface ShippingInfo {
+  readonly recipientName: string;
+  readonly phone: string;
+  readonly address: string;
+  readonly city: string;
+  readonly postalCode: string;
+  readonly fee: number;
+}
+
 // ----- Output: Checkout Preview (Nested Structure) -----
 export interface CheckoutPreview {
   readonly summary: {
@@ -32,6 +43,8 @@ export interface CheckoutPreview {
     readonly totalItemCount: number;
     readonly subtotal: number;
     readonly isReady: boolean;
+    // 💰 FINANCIAL FIELDS - Phase 5 Step 1
+    readonly tax?: number;
   };
 
   readonly items: ReadonlyArray<CheckoutItemPreview>;
@@ -40,11 +53,15 @@ export interface CheckoutPreview {
     readonly passed: boolean;
     readonly failedItems: ReadonlyArray<number>;
   };
+
+  // 📍 SHIPPING INFO - Phase 5 Step 1
+  readonly shipping?: ShippingInfo;
 }
 
 export interface CheckoutItemPreview {
   readonly productId: number;
   readonly productName: string;
+  readonly productImage?: string | null;
   readonly unitPrice: number;
   readonly quantity: number;
   readonly availableStock: number;

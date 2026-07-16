@@ -1,8 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { OrderError as OrderErrorType } from '@/services/order.service';
-import { getOrderErrorMessage } from '@/services/order.service';
+import { OrderError as OrderErrorType, ORDER_ERROR_MESSAGES } from '@/services/order.service';
 
 interface OrderErrorProps {
   error: OrderErrorType;
@@ -10,6 +9,8 @@ interface OrderErrorProps {
 }
 
 export function OrderError({ error, onRetry }: OrderErrorProps) {
+  const errorMessage = ORDER_ERROR_MESSAGES[error] || ORDER_ERROR_MESSAGES[OrderErrorType.UNKNOWN];
+
   return (
     <div className="text-center py-12">
       <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -30,7 +31,7 @@ export function OrderError({ error, onRetry }: OrderErrorProps) {
       <h3 className="text-lg font-semibold text-secondary-900 mb-2">
         Gagal Memuat
       </h3>
-      <p className="text-secondary-600 mb-6">{getOrderErrorMessage(error)}</p>
+      <p className="text-secondary-600 mb-6">{errorMessage}</p>
       <Button onClick={onRetry}>Coba Lagi</Button>
     </div>
   );

@@ -16,6 +16,7 @@ import type {
   AuthErrorCode,
 } from '@/components/features/auth/auth-state';
 import { AUTH_ERROR_MESSAGES } from '@/components/features/auth/auth-state';
+import { authService } from '@/services/auth.service';
 
 interface AuthState {
   // Core state - server is source of truth
@@ -32,6 +33,9 @@ interface AuthActions {
   setStatus: (status: AuthStatus) => void;
   setError: (code: AuthErrorCode, customMessage?: string) => void;
   clearError: () => void;
+
+  // Logout action
+  logout: () => Promise<void>;
 
   // Reset (for logout)
   reset: () => void;
@@ -63,6 +67,22 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }),
 
       clearError: () => set({ error: null }),
+
+      // Logout - call backend and reset state
+      logout: async () => {
+        try {
+          await authService.logout();
+        } catch {
+          // Ignore backend errors, still reset local state
+        } finally {
+          // Always reset local state regardless of backend result
+          set({
+            user: null,
+            status: 'GUEST',
+            error: null,
+          });
+        }
+      },
 
       reset: () => set({ ...initialState }),
     }),

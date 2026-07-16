@@ -1,6 +1,7 @@
 // ============================================================
 // ORDER LIFECYCLE TYPES
 // Phase 5 Step 1: Order Lifecycle Foundation
+// Extended for complete order lifecycle
 //
 // Philosophy:
 // - STRICTLY MINIMAL for Step 1
@@ -13,20 +14,25 @@
 /**
  * Order Status — Complete Lifecycle
  *
- * Step 1 Scope:
+ * Extended with shipping states:
  * - DRAFT: Created from checkout (Phase 4)
  * - WAITING_PAYMENT: Payment intent created, awaiting confirmation
  * - PAID: Payment confirmed
+ * - PROCESSING: Seller preparing items
+ * - SHIPPING: Package shipped
+ * - DELIVERED: Package delivered to customer
+ * - COMPLETED: Customer confirmed delivery
  * - EXPIRED: Payment timeout exceeded
  * - CANCELLED: Order cancelled
- *
- * NOT in Step 1:
- * - SHIPPING, DELIVERED (Phase 6)
  */
 export type OrderStatus =
-  | 'DRAFT' // Checkout complete, awaiting payment initiation
-  | 'WAITING_PAYMENT' // Payment intent created, awaiting confirmation
+  | 'DRAFT' // Keranjang → Order draft, awaiting payment initiation
+  | 'WAITING_PAYMENT' // Payment initiated, awaiting confirmation
   | 'PAID' // Payment confirmed
+  | 'PROCESSING' // Seller preparing items
+  | 'SHIPPING' // Package shipped
+  | 'DELIVERED' // Package delivered to customer
+  | 'COMPLETED' // Customer confirmed delivery
   | 'EXPIRED' // Payment timeout exceeded
   | 'CANCELLED'; // Order cancelled
 
@@ -34,11 +40,6 @@ export type OrderStatus =
 /**
  * State Transition Map
  * Defines EXACTLY which transitions are allowed
- *
- * Step 1: Only defines the rules
- * Step 3: Will call DRAFT → WAITING_PAYMENT
- * Step 6: Will call WAITING_PAYMENT → PAID
- * Step 8: Will call WAITING_PAYMENT → EXPIRED
  */
 export const OrderStateTransitions = {
   DRAFT: {
@@ -48,6 +49,18 @@ export const OrderStateTransitions = {
     canTransitionTo: ['PAID', 'EXPIRED', 'CANCELLED'] as const,
   },
   PAID: {
+    canTransitionTo: ['PROCESSING', 'CANCELLED'] as const,
+  },
+  PROCESSING: {
+    canTransitionTo: ['SHIPPING', 'CANCELLED'] as const,
+  },
+  SHIPPING: {
+    canTransitionTo: ['DELIVERED', 'CANCELLED'] as const,
+  },
+  DELIVERED: {
+    canTransitionTo: ['COMPLETED'] as const,
+  },
+  COMPLETED: {
     canTransitionTo: [] as const, // Terminal
   },
   EXPIRED: {
@@ -62,8 +75,11 @@ export const OrderStateTransitions = {
 >;
 
 // ----- Terminal States -----
+/**
+ * Terminal states are final (no more transitions allowed)
+ */
 export const TERMINAL_STATES: readonly OrderStatus[] = [
-  'PAID',
+  'COMPLETED',
   'EXPIRED',
   'CANCELLED',
 ] as const;

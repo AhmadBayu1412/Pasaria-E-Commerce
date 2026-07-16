@@ -45,9 +45,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(null);
           setStatus('GUEST');
         }
-      } catch (error) {
-        const errorCode = handleAuthError(error);
-        setError(errorCode);
+      } catch {
+        // Network error or session check failed - treat as guest
         setUser(null);
         setStatus('GUEST');
       } finally {
@@ -56,7 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     checkSession();
-  }, [setUser, setStatus, setError]);
+  }, [setUser, setStatus]);
 
   if (isInitializing) {
     return <AuthLoading />;

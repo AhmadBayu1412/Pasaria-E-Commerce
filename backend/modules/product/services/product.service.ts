@@ -19,6 +19,15 @@ function normalizeProduct(product: any): ProductResponseDTO {
     const availableStock = product.availableStock ?? 0
     const reservedStock = product.reservedStock ?? 0
 
+    // Normalize images
+    const images = (product.images || []).map((img: any) => ({
+        id: img.id,
+        url: img.path, // Use path as URL (Unsplash URL in this case)
+        filename: img.filename,
+        mimeType: img.mimeType,
+        isPrimary: img.isPrimary ?? false,
+    }))
+
     return {
         id: product.id,
         name: product.name,
@@ -31,6 +40,7 @@ function normalizeProduct(product: any): ProductResponseDTO {
         // -------------------------------------------
         sellerId: product.sellerId,
         categoryId: product.categoryId,
+        images,
         createdAt: product.createdAt instanceof Date
         ? product.createdAt.toISOString()
         : new Date(product.createdAt).toISOString(),
@@ -84,7 +94,8 @@ export async function getProducts(
         page = 1,
         limit = 20,
         sortBy = "createdAt",
-        sortOrder = "desc"
+        sortOrder = "desc",
+        category
     } = params
 
     const skip = (page - 1) * limit
@@ -92,6 +103,11 @@ export async function getProducts(
 
     // Build where clause berdasarkan role
     const where: Prisma.ProductWhereInput = {}
+
+    // Filter by category if provided
+    if (category) {
+        where.categoryId = category
+    }
 
     // SELLER hanya melihat produk miliknya
     if (user?.role === "SELLER") {
@@ -110,6 +126,12 @@ export async function getProducts(
         include: {
             category: {
             select: { id: true, name: true }
+            },
+            images: {
+            orderBy: [
+                { isPrimary: 'desc' },
+                { position: 'asc' }
+            ]
             }
         }
         }),
@@ -151,6 +173,12 @@ export async function getProductById(id: number): Promise<ProductResponseDTO | n
         include: {
         category: {
             select: { id: true, name: true }
+        },
+        images: {
+            orderBy: [
+            { isPrimary: 'desc' },
+            { position: 'asc' }
+            ]
         }
         }
     })
@@ -345,14 +373,15 @@ export interface ProductSnapshot {
   readonly id: number
   readonly name: string
   readonly basePrice: Decimal
+  readonly imageUrl: string | null
 }
 
 /**
  * Get Product Info for Checkout Snapshot
- * 
+ *
  * Returns minimal product data needed for Order snapshot.
  * Does NOT return full product entity.
- * 
+ *
  * @param productId - Product ID
  * @returns Product snapshot data
  * @throws BusinessError PRODUCT_NOT_FOUND
@@ -364,6 +393,13 @@ export async function getProductForSnapshot(productId: number): Promise<ProductS
       id: true,
       name: true,
       basePrice: true,
+      images: {
+        orderBy: [
+          { isPrimary: 'desc' },
+          { position: 'asc' }
+        ],
+        take: 1,
+      },
     },
   })
 
@@ -375,5 +411,6 @@ export async function getProductForSnapshot(productId: number): Promise<ProductS
     id: product.id,
     name: product.name,
     basePrice: product.basePrice,
+    imageUrl: product.images[0]?.path || null,
   }
 }

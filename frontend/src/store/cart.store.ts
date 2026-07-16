@@ -2,7 +2,7 @@
 
 /**
  * Cart Store (Zustand)
- * 
+ *
  * Simplified cart state management following blueprint revision:
  * - Frontend as consumer, backend as source of truth
  * - Derived state (subtotal) NOT stored, calculated via useMemo
@@ -13,9 +13,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CartItem, Cart, CheckoutPreview, ShippingOption, AddItemPayload } from './cart.types';
-
-// API Base URL - use shared constant
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '@/lib/constants';
 
 interface CartState {
   // Core state - ONLY store what backend returns
@@ -120,7 +118,7 @@ export const useCartStore = create<CartState & CartActions>()(
         set({ items: [], checkoutPreview: null, selectedShipping: null });
       },
 
-      // Sync with server (replace local with server state)
+      // Sync with server - CRITICAL: never replace local items with empty server response
       syncWithServer: async () => {
         set({ isSyncing: true, error: null });
 
@@ -130,14 +128,26 @@ export const useCartStore = create<CartState & CartActions>()(
           });
 
           if (!response.ok) {
-            throw new Error('Failed to fetch cart');
+            console.warn('Failed to sync cart with server, keeping local state');
+            set({ isSyncing: false });
+            return;
           }
 
           const data = await response.json();
-          set({ items: data.cart?.items || [] });
+          const serverItems = data.cart?.items || [];
+          const localItems = get().items;
+
+          // Only update if server has items OR if local is empty
+          // This prevents local items from being lost when server returns empty
+          if (serverItems.length > 0) {
+            set({ items: serverItems });
+          } else if (localItems.length === 0) {
+            // Only clear if BOTH are empty - this is the "load from server" case
+            set({ items: [] });
+          }
+          // If server is empty but we have local items, DO NOTHING - keep local
         } catch (error) {
-          console.error('Cart sync error:', error);
-          set({ error: 'Gagal sinkronisasi keranjang' });
+          console.warn('Cart sync error:', error);
         } finally {
           set({ isSyncing: false });
         }
@@ -153,14 +163,25 @@ export const useCartStore = create<CartState & CartActions>()(
           });
 
           if (!response.ok) {
-            throw new Error('Failed to load cart');
+            console.warn('Failed to load cart from server, keeping local state');
+            set({ isLoading: false });
+            return;
           }
 
           const data = await response.json();
-          set({ items: data.cart?.items || [] });
+          const serverItems = data.cart?.items || [];
+          const localItems = get().items;
+
+          // Prefer server data if available, otherwise keep local
+          if (serverItems.length > 0) {
+            set({ items: serverItems });
+          } else if (localItems.length === 0) {
+            // Only set empty if both are empty
+            set({ items: [] });
+          }
+          // If server empty but local has items, keep local
         } catch (error) {
-          console.error('Cart load error:', error);
-          set({ error: 'Gagal memuat keranjang' });
+          console.warn('Cart load error:', error);
         } finally {
           set({ isLoading: false });
         }

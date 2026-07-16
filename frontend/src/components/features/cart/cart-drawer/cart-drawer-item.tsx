@@ -65,13 +65,21 @@ export function CartDrawerItem({ item }: CartDrawerItemProps) {
           href={`/products/${item.slug}`}
           className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-secondary-100"
         >
-          <Image
-            src={item.image}
-            alt={item.name}
-            fill
-            className="object-cover"
-            sizes="80px"
-          />
+          {item.image ? (
+            <Image
+              src={item.image}
+              alt={item.name}
+              fill
+              className="object-cover"
+              sizes="80px"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-secondary-100">
+              <span className="text-secondary-400 text-lg font-semibold">
+                {item.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
         </Link>
 
         {/* Product Info */}

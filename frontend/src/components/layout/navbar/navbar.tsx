@@ -23,12 +23,15 @@ export function Navbar({
   className?: string;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
   // Auth state
   const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.status === 'AUTHENTICATED');
+  const status = useAuthStore((state) => state.status);
+  const logout = useAuthStore((state) => state.logout);
+  const isAuthenticated = status === 'AUTHENTICATED';
 
   // Cart badge count
   const cartItemCount = useCartStore((state) => state.items.length);
@@ -116,13 +119,66 @@ export function Navbar({
               </Link>
 
               {/* User Menu */}
-              <Link
-                href="/login"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
-              >
-                <User className="w-4 h-4" />
-                <span>Masuk</span>
-              </Link>
+              {isAuthenticated && user ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-secondary-700 hover:bg-secondary-50 rounded-xl transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center">
+                      <span className="text-primary-600 font-semibold text-xs">
+                        {user.email.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="max-w-[100px] truncate">{user.email.split('@')[0]}</span>
+                  </button>
+
+                  {/* User Dropdown */}
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-secondary-100 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-secondary-100">
+                        <p className="text-sm font-medium text-secondary-900 truncate">{user.email}</p>
+                        <p className="text-xs text-secondary-500 capitalize">{user.role.toLowerCase()}</p>
+                      </div>
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <User className="w-4 h-4" />
+                        Profil
+                      </Link>
+                      <Link
+                        href="/orders"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        Pesanan
+                      </Link>
+                      <button
+                        onClick={async () => {
+                          setUserMenuOpen(false);
+                          await logout();
+                          router.push('/');
+                        }}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Keluar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-xl transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Masuk</span>
+                </Link>
+              )}
 
               {/* Mobile Menu Button */}
               <button
@@ -161,13 +217,48 @@ export function Navbar({
 
             {/* Mobile Auth */}
             <div className="mt-4 pt-4 border-t border-secondary-100">
-              <Link
-                href="/login"
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors"
-              >
-                <User className="w-4 h-4" />
-                <span>Masuk / Daftar</span>
-              </Link>
+              {isAuthenticated && user ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                      <span className="text-primary-600 font-semibold text-sm">
+                        {user.email.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-secondary-900 truncate">{user.email}</p>
+                      <p className="text-xs text-secondary-500 capitalize">{user.role.toLowerCase()}</p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 rounded-lg"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    Profil
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      setMobileMenuOpen(false);
+                      await logout();
+                      router.push('/');
+                    }}
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Keluar
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Masuk / Daftar</span>
+                </Link>
+              )}
             </div>
           </div>
         )}

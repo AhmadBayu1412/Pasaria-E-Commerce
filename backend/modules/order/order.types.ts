@@ -10,7 +10,7 @@
 // - OrderItem is a PURE SNAPSHOT (no relation to Product)
 // ============================================================
 
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { OrderStatus } from './order-lifecycle.types.js';
 
 // ----- Prisma Payload Types -----
@@ -20,7 +20,7 @@ export type OrderWithItems = Prisma.OrderGetPayload<{
 
 // ----- Input Types -----
 export interface CreateDraftInput {
-  readonly checkoutPreview: import("../checkout/checkout.types.js").CheckoutPreview;
+  readonly checkoutPreview: import('../checkout/checkout.types.js').CheckoutPreview;
 }
 
 /**
@@ -61,6 +61,7 @@ export interface StateTransitionResult {
 export interface OrderItemSnapshot {
   readonly productId: number;
   readonly productName: string;
+  readonly productImage?: string | null;
   readonly unitPrice: number;
   readonly quantity: number;
   readonly subtotal: number;
@@ -74,6 +75,16 @@ export interface OrderDraft {
   readonly totalQuantity: number;
   readonly totalItemCount: number;
   readonly subtotal: number;
+  // 💰 FINANCIAL FIELDS - Fixes NaN issue
+  readonly shippingFee: number;
+  readonly tax: number;
+  readonly total: number;
+  // 📍 SHIPPING INFO
+  readonly shippingName?: string;
+  readonly shippingPhone?: string;
+  readonly shippingAddress?: string;
+  readonly shippingCity?: string;
+  readonly shippingPostalCode?: string;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -82,6 +93,7 @@ export interface OrderDraft {
 export interface OrderItemData {
   readonly productId: number;
   readonly productName: string;
+  readonly productImage?: string | null;
   readonly unitPrice: number;
   readonly quantity: number;
   readonly subtotal: number;

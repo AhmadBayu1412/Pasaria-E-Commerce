@@ -75,6 +75,7 @@ export const CheckoutService = {
         return {
           productId: item.productId,
           productName: product.name,
+          productImage: product.imageUrl,
           unitPrice: unitPriceNum,
           quantity: item.quantity,
           availableStock: stockResult.availableStock,
@@ -119,6 +120,7 @@ export const CheckoutService = {
       items: itemResults.map((r) => ({
         productId: r.productId,
         productName: r.productName,
+        productImage: r.productImage,
         unitPrice: r.unitPrice,
         quantity: r.quantity,
         availableStock: r.availableStock,

@@ -32,7 +32,7 @@ export interface Cart {
 }
 
 export interface AddItemPayload {
-  productId: string;
+  productId: number;
   variantId?: string;
   quantity: number;
 }
@@ -63,6 +63,27 @@ export interface ShippingOption {
   name: string;
   price: number;
   estimatedDays: string;
+  description?: string;
+  logo?: string;
+}
+
+export type PaymentMethodType =
+  | 'bank_transfer'
+  | 'ewallet'
+  | 'credit_card'
+  | 'convenience_store'
+  | 'qr_code';
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  type: PaymentMethodType;
+  provider: string;
+  icon: string;
+  description?: string;
+  fee: number;
+  minAmount?: number;
+  maxAmount?: number;
 }
 
 export interface Address {
@@ -72,6 +93,7 @@ export interface Address {
   phone: string;
   address: string;
   city: string;
+  province?: string;
   postalCode: string;
   isDefault: boolean;
 }

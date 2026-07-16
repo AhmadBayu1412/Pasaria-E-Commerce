@@ -1,139 +1,92 @@
 // ============================================================
-// CATEGORY CONTROLLER - HTTP Handlers
+// CATEGORY CONTROLLER — HTTP Handlers
+// Handles category-related HTTP requests
 // ============================================================
 
-import { Request, Response, NextFunction } from "express"
-import {
-    getCategories,
-    getCategoryById,
-    createCategory,
-    updateCategory,
-    deleteCategory
-} from "./category.service.js"
+import { Request, Response } from 'express';
+import { CategoryService } from './category.service.js';
 
-export async function getCategoriesController(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
+export const CategoryController = {
+  /**
+   * GET /categories
+   *
+   * Get all categories with product count
+   *
+   * Response: 200 OK with categories array
+   */
+  async getCategories(req: Request, res: Response): Promise<void> {
     try {
-        const categories = await getCategories()
-        return res.status(200).json({
-            success: true,
-            data: categories,
-            count: Array.isArray(categories) ? categories.length : 0
-        })
-    } catch (err) {
-        next(err)
-    }
-}
+      const categories = await CategoryService.getAllWithProductCount();
 
-export async function getCategoryByIdController(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
+      res.status(200).json({
+        success: true,
+        data: {
+          items: categories,
+        },
+      });
+    } catch (error) {
+      console.error('[CategoryController] getCategories error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch categories',
+        },
+      });
+    }
+  },
+
+  /**
+   * GET /categories/:id
+   *
+   * Get category by ID with product count
+   *
+   * Response: 200 OK with category, 404 if not found
+   */
+  async getCategoryById(req: Request, res: Response): Promise<void> {
     try {
-        const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-        const id = parseInt(idStr, 10)
+      const idParam = req.params.id;
+      const id = parseInt(Array.isArray(idParam) ? idParam[0] : idParam, 10);
 
-        if (Number.isNaN(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid ID"
-            })
-        }
+      if (isNaN(id) || id <= 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid category ID',
+          },
+        });
+        return;
+      }
 
-        const category = await getCategoryById(id)
+      const category = await CategoryService.getByIdWithProductCount(id);
 
-        if (!category) {
-            return res.status(404).json({
-                success: false,
-                message: "Category not found"
-            })
-        }
+      if (!category) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Category not found',
+          },
+        });
+        return;
+      }
 
-        return res.json({
-            success: true,
-            data: category
-        })
-    } catch (err) {
-        next(err)
+      res.status(200).json({
+        success: true,
+        data: {
+          category,
+        },
+      });
+    } catch (error) {
+      console.error('[CategoryController] getCategoryById error:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch category',
+        },
+      });
     }
-}
-
-export async function createCategoryController(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
-    try {
-        const user = req.user!
-        const category = await createCategory(req.body, user)
-
-        return res.status(201).json({
-            success: true,
-            data: category,
-            message: "Category created successfully"
-        })
-    } catch (err) {
-        next(err)
-    }
-}
-
-export async function updateCategoryController(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
-    try {
-        const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-        const id = parseInt(idStr, 10)
-
-        if (Number.isNaN(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid ID"
-            })
-        }
-
-        const user = req.user!
-        const category = await updateCategory(id, req.body, user)
-
-        return res.json({
-            success: true,
-            data: category,
-            message: "Category updated successfully"
-        })
-    } catch (err) {
-        next(err)
-    }
-}
-
-export async function deleteCategoryController(
-    req: Request,
-    res: Response,
-    next: NextFunction
-) {
-    try {
-        const idStr = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-        const id = parseInt(idStr, 10)
-
-        if (Number.isNaN(id)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid ID"
-            })
-        }
-
-        const user = req.user!
-        await deleteCategory(id, user)
-
-        return res.json({
-            success: true,
-            message: "Category deleted successfully"
-        })
-    } catch (err) {
-        next(err)
-    }
-}
+  },
+} as const;

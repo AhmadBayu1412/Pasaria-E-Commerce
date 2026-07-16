@@ -1,7 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// This is your Prisma schema file
 
 generator client {
   provider = "prisma-client-js"
@@ -11,7 +8,7 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
- 
+
 // ============================================================
 // Category MODEL (Phase 3 Step 2)
 // ============================================================
@@ -21,7 +18,6 @@ model Category {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  // Relasi: 1 Category → N Products
   products  Product[]
 
   @@index([name])
@@ -34,53 +30,38 @@ model Product {
   id          Int       @id @default(autoincrement())
   name        String
   description String?
-  price       Decimal   @default(0)  // Legacy - kept for migration compatibility
-  // --- Inventory Fields (Phase 3 Step 4) ---
-  availableStock Int     @default(0)  // Stok yang bisa dijual langsung
-  reservedStock  Int     @default(0)  // Stok yang sudah di-reserve (cart)
-  // totalStock = availableStock + reservedStock (computed, tidak disimpan)
-  // -------------------------------------------
+  price       Decimal   @default(0)
+  // Inventory Fields
+  availableStock Int     @default(0)
+  reservedStock  Int     @default(0)
+  // Legacy pricing fields (kept for compatibility)
+  basePrice       Decimal  @default(0)
+  discountPrice   Decimal?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-// ============================================================
-// Ownership - Relasi ke user sebagai seller (Phase 2 Step 1)
-// ============================================================
   sellerId    Int
   seller      User      @relation(fields: [sellerId], references: [id])
 
-// Category Relation (Phase 3 Step 2) - Nullable
   categoryId  Int?
   category    Category? @relation(fields: [categoryId], references: [id])
 
-  // ===== Product Images (Phase 3 Step 5) =====
   images      ProductImage[]
-
-  // ===== Product Pricing (Phase 3 Step 6) =====
-  basePrice       Decimal  @default(0)  // Required, > 0
-  discountPrice   Decimal?             // Optional, >= 0, <= basePrice
-
-// ============================================================
-// CartItem Relation (Phase 4 Step 1)
-// Product dapat muncul di banyak CartItem
-// NOTE: Tidak ada onDelete - agar tidak bisa hapus product yang masih di cart
-// ============================================================
-  cartItems       CartItem[]
+  cartItems   CartItem[]
 }
- 
- // ===== PRODUCTIMGAE MODEL =====
+
 model ProductImage {
   id         Int      @id @default(autoincrement())
   productId  Int
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // Metadata domain
-  path       String   // Local path: "uploads/products/1/abc123.jpg"
-  filename   String   // Original filename: "product-photo.jpg"
-  mimeType   String   // "image/jpeg", "image/png", "image/webp"
-  size       Int      // File size in bytes
-  position   Int      @default(0)  // Display order (0 = first)
-  isPrimary  Boolean  @default(false)  // Only 1 primary per product
+  path       String
+  filename   String
+  mimeType   String
+  size       Int
+  position   Int      @default(0)
+  isPrimary  Boolean  @default(false)
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -92,14 +73,13 @@ model ProductImage {
 // ============================================================
 // Audit MODULE (Phase 1)
 // ============================================================
-
 model Audit {
   id         Int         @id @default(autoincrement())
-  action     String      // CREATE_PRODUCT, UPDATE_PRODUCT, DELETE_PRODUCT
-  entityType String      // "Product", "Order", dll
-  entityId   Int          
-  data       String      // JSON stringified
-  requestId  String?     
+  action     String
+  entityType String
+  entityId   Int
+  data       String
+  requestId  String?
   createdAt  DateTime    @default(now())
 }
 
@@ -121,26 +101,43 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-// ============================================================
-// Relasi Ownership - satu user bisa punya banyak product (Phase 2 Step 1)
-// ============================================================
   products      Product[]
+  cart          Cart?
+  orders        Order[]
+  addresses     Address[]
+}
 
 // ============================================================
-// Cart Relation - satu user punya satu cart (Phase 4 Step 1)
-// LAZY: Cart dibuat saat Add-To-Cart pertama kali
+// Address MODEL
+// For user shipping addresses
 // ============================================================
-  cart          Cart?
+model Address {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label        String   @default("Rumah")
+  recipientName String
+  phone        String
+  address      String
+  city         String
+  province     String   @default("DKI Jakarta")
+  postalCode   String   @default("12345")
+  isDefault    Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
 }
 
 // ============================================================
 // Cart MODEL (Phase 4 Step 1)
-// Aggregate Root for Shopping Session
-// Creation Strategy: LAZY (dibuat saat Add-To-Cart pertama kali)
 // ============================================================
 model Cart {
   id        Int        @id @default(autoincrement())
-  userId    Int        @unique          // Exactly ONE Cart per User
+  userId    Int        @unique
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
   createdAt DateTime   @default(now())
@@ -149,22 +146,16 @@ model Cart {
   @@index([userId])
 }
 
-// ============================================================
-// CartItem MODEL (Phase 4 Step 1)
-// Child Entity of Cart Aggregate
-// Represents a product in the cart with quantity
-// ============================================================
 model CartItem {
   id        Int      @id @default(autoincrement())
   cartId    Int
   cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId Int
-  product   Product  @relation(fields: [productId], references: [id])  // Inverse relation to Product.cartItems
-  quantity  Int      @default(1)     // Invariant: >= 1
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Invariant: Satu Product hanya muncul sekali per Cart
   @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
@@ -172,28 +163,36 @@ model CartItem {
 
 // ============================================================
 // Order Aggregate (Phase 4 Step 6)
-// Order is a HISTORICAL RECORD - no relation to Product
-// Creation: When user converts Checkout Preview to Order Draft
+// Extended with financial fields
 // ============================================================
-
 model Order {
   id             Int         @id @default(autoincrement())
   userId         Int
+  user           User        @relation(fields: [userId], references: [id])
   status         OrderStatus @default(DRAFT)
 
-  // Snapshot totals
-  totalQuantity  Int         @default(0)   // SUM of all item quantities
-  totalItemCount Int         @default(0)   // COUNT of distinct items
-  subtotal       Decimal     @default(0)   // SUM of all subtotals
+  totalQuantity  Int         @default(0)
+  totalItemCount Int        @default(0)
+  subtotal       Decimal     @default(0)
 
-  // Timestamps
+  // 💰 FINANCIAL FIELDS - Fixes NaN issue
+  shippingFee    Decimal     @default(0)
+  tax            Decimal     @default(0)
+  total          Decimal     @default(0)
+
+  // Shipping info snapshot
+  shippingName       String?
+  shippingPhone      String?
+  shippingAddress    String?
+  shippingCity       String?
+  shippingPostalCode String?
+
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  // Relations
   items          OrderItem[]
-  payments       Payment[]   // One Order can have many Payment attempts
-  timeline       OrderTimeline[]  // Audit log
+  payments       Payment[]
+  timeline       OrderTimeline[]
 
   @@index([userId])
   @@index([status])
@@ -204,12 +203,12 @@ model OrderItem {
   orderId      Int
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  // ===== PURE SNAPSHOT - NO RELATION TO PRODUCT =====
-  productId    Int      // Historical reference only
-  productName  String   // Snapshot at time of order
-  unitPrice    Decimal  // Snapshot at time of order
+  productId    Int
+  productName  String
+  productImage String?
+  unitPrice    Decimal
   quantity     Int
-  subtotal     Decimal  // quantity * unitPrice
+  subtotal     Decimal
 
   createdAt    DateTime @default(now())
 
@@ -217,182 +216,100 @@ model OrderItem {
 }
 
 // ============================================================
-// OrderTimeline MODEL (Phase 5 Step 6)
-// Audit log for order state transitions
-//
-// Purpose:
-// - Record all state changes for auditing
-// - Immutable append-only log
-// ============================================================
-
-model OrderTimeline {
-  id        Int       @id @default(autoincrement())
-  orderId   Int
-  event     String                // Event name (e.g., "PAYMENT_CONFIRMED")
-  metadata  Json?                // Additional event data
-
-  createdAt DateTime @default(now())
-
-  order     Order     @relation(fields: [orderId], references: [id])
-
-  @@index([orderId])
-  @@index([event])
-}
-
-enum OrderStatus {
-  DRAFT
-  // Phase 5 Step 1: Order Lifecycle Foundation
-  WAITING_PAYMENT
-  PAID
-  EXPIRED
-  CANCELLED
-  // Future: SHIPPING, DELIVERED (Phase 6)
-}
-
-// ============================================================
 // Payment MODEL (Phase 5 Step 2)
-// Payment Aggregate - Record of payment attempt
-//
-// Design: MINIMAL for Step 2
-// - providerReference NOT included (Step 7)
-// - expiresAt NOT included (Step 8)
-// - orderId uses @index (supports retry)
 // ============================================================
-
 enum PaymentProvider {
-  STUB      // Step 2: Only STUB for testing
-  MIDTRANS  // Step 7: Midtrans Snap API
-  XENDIT    // Future: Xendit Invoice API
+  STUB
+  MIDTRANS
+  XENDIT
 }
 
 enum PaymentStatus {
-  PENDING   // Intent created
-  SUCCESS   // Payment confirmed (Step 6+)
-  FAILED    // Payment failed (Step 6+)
-  CANCELLED // Payment cancelled by user (Step 6+)
-  DECLINED  // Gateway rejected (Step 6+)
-  EXPIRED   // Timeout exceeded (Step 8+)
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  DECLINED
+  EXPIRED
 }
 
 model Payment {
   id                Int              @id @default(autoincrement())
-  orderId           Int              // NOT @unique - supports multiple attempts
+  orderId           Int
+  order             Order            @relation(fields: [orderId], references: [id])
   userId            Int
 
-  amount            Int              // In smallest unit (rupiah)
+  amount            Int
   currency          String           @default("IDR")
-
   provider          PaymentProvider
 
-  // External reference - identity milik kita untuk webhook lookup
-  // Format: "PAY-{paymentId}-{orderId}"
-  // Dibuat di Domain layer (PaymentIntentService)
+  // External reference
   externalReference    String        @unique
 
-  // Snap token - untuk redirect (dari Snap API)
+  // Snap token
   snapToken         String?
 
-  // Gateway transaction reference (set when webhook confirms payment)
-  // UNIQUE: Satu gateway transaction tidak boleh dimiliki dua payment
+  // Gateway transaction reference
   gatewayTransactionId String?       @unique
 
   status            PaymentStatus    @default(PENDING)
 
   createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  order             Order            @relation(fields: [orderId], references: [id])
-
-  // Relations
-  webhookEvents     WebhookEvent[]
+  updatedAt        DateTime         @updatedAt
 
   @@index([status])
   @@index([orderId])
 }
 
 // ============================================================
-// WebhookEvent MODEL (Phase 5 Step 6)
-//
-// Purpose:
-// 1. DEDUPLICATION — Prevent same event from being processed twice
-// 2. AUDIT LOG — Record all webhook events for debugging
-//
-// Design:
-// - gatewayTransactionId as UNIQUE identifier (deduplication)
-// - Minimal fields for deduplication
-// - Full request stored for audit trail
-// NOTE: rawPayload is subject to PII redaction (Step 7+)
+// Order Timeline (Phase 5 Step 6)
 // ============================================================
+model OrderTimeline {
+  id        Int       @id @default(autoincrement())
+  orderId   Int
+  order     Order     @relation(fields: [orderId], references: [id])
+  event     String
+  metadata  String?
 
-enum WebhookEventStatus {
-  PENDING    // Event received, awaiting processing
-  PROCESSED  // Successfully processed
-  FAILED     // Processing failed (logged, not retried automatically)
-  // NOTE: IGNORED removed — duplicates are still PROCESSED, just skipped
-}
+  createdAt DateTime @default(now())
 
-model WebhookEvent {
-  id                     Int              @id @default(autoincrement())
-  gatewayTransactionId   String           @unique  // Deduplication key
-  gatewayProvider        String                        // "STUB", "MIDTRANS", "XENDIT"
-
-  // Minimal event data (for deduplication query)
-  eventType             String                        // "PAYMENT_SETTLEMENT"
-  paymentId             Int?                         // FK to Payment (after processing)
-
-  // Full payload stored for AUDIT purposes only
-  // WARNING: Do not expose raw payload in API responses
-  // Subject to PII redaction in Step 7+
-  rawPayload            Json                          // Full webhook payload
-
-  // Processing state
-  status                WebhookEventStatus @default(PENDING)
-  processedAt           DateTime?
-  errorMessage          String?
-
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  // Relations
-  payment               Payment?          @relation(fields: [paymentId], references: [id])
-
-  @@index([status, createdAt])
-  @@index([gatewayProvider])
+  @@index([orderId])
 }
 
 // ============================================================
-// IdempotencyRecord MODEL (Phase 5 Step 5)
-// Idempotency Layer - Prevents duplicate charge from retry/timeout
-//
-// Design Decisions:
-// - idempotencyKey @unique = database-level atomic lock
-// - status field = PENDING | COMPLETED | FAILED
-// - expiresAt nullable = NOT used in Step 5 (Phase Lanjutan)
+// Idempotency Record (Phase 5 Step 5)
 // ============================================================
-
 enum IdempotencyStatus {
-  PENDING   // Request sedang diproses (owner dari key ini)
-  COMPLETED // Request selesai, response tersimpan (bisa direplay)
-  FAILED    // Request gagal, boleh retry
+  PENDING
+  COMPLETED
+  FAILED
 }
 
 model IdempotencyRecord {
   id                Int              @id @default(autoincrement())
-  idempotencyKey    String           @unique  // Atomic lock - one request per key
-  resourceType      String                        // "PAYMENT_INITIATE", "REFUND", etc.
-  resourceId        Int?                          // FK to Payment.id (nullable for pending)
-
-  // Response cache
-  responseData      Json                            // Stored response body
-  responseStatus    Int                             // HTTP status code
-
-  // Metadata
+  idempotencyKey    String           @unique
+  resourceType      String
+  resourceId        Int?
+  responseData      String
+  responseStatus    Int
   status            IdempotencyStatus @default(PENDING)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  // NOTE: expiresAt NOT used in Step 5 (Phase Lanjutan for TTL)
-  expiresAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([idempotencyKey])
-  @@index([resourceType, status])
+}
+
+// ============================================================
+// OrderStatus Enum - Extended for complete lifecycle
+// ============================================================
+enum OrderStatus {
+  DRAFT
+  WAITING_PAYMENT
+  PAID
+  PROCESSING      // 🆕 Added for shipping
+  SHIPPING        // 🆕 Added for shipping
+  DELIVERED       // 🆕 Added for completion
+  COMPLETED       // 🆕 Added for user confirmation
+  EXPIRED
+  CANCELLED
 }

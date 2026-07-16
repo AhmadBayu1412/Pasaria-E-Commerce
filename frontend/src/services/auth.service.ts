@@ -58,12 +58,12 @@ const authApiClient = axios.create({
 export const authService = {
   /**
    * Login user
-   * Backend: POST /auth/login returns { data: { user } }
+   * Backend: POST /auth/login returns { data: { user: { id, email, role } } }
    */
   async login(data: LoginRequest): Promise<LoginResponse> {
-    const response = await authApiClient.post<BackendAuthResponse>('/auth/login', data);
-    // Transform: { data: { user } } -> { user }
-    return { user: response.data.data };
+    const response = await authApiClient.post<{ data: { user: User } }>('/auth/login', data);
+    // Transform: { data: { user: { id, email, role } } } -> { user: { id, email, role } }
+    return { user: response.data.data.user };
   },
 
   /**
@@ -100,7 +100,16 @@ export const authService = {
       const response = await authApiClient.get<{
         success: boolean;
         data: { id: number; email: string; role: string };
-      }>('/users/me');
+      }>('/users/me', {
+        // Don't throw on 4xx status codes - we handle them here
+        validateStatus: (status) => status >= 200 && status < 400,
+      });
+
+      // If response indicates no user (401 or similar handled by validateStatus)
+      if (!response.data?.data) {
+        return { user: null };
+      }
+
       // Transform backend response to frontend expected format
       return {
         user: {
@@ -110,6 +119,7 @@ export const authService = {
         },
       };
     } catch {
+      // Network error or other issues - treat as guest
       return { user: null };
     }
   },

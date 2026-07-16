@@ -29,9 +29,18 @@ export interface PaginationParamsDTO {
   readonly limit?: number
   readonly sortBy?: "name" | "price" | "createdAt" | "stock"
   readonly sortOrder?: "asc" | "desc"
+  readonly category?: number // Filter by category ID
 }
 
 // ----- Response DTOs -----
+export interface ProductImageDTO {
+    readonly id: number
+    readonly url: string
+    readonly filename: string
+    readonly mimeType: string
+    readonly isPrimary: boolean
+}
+
 export interface ProductResponseDTO {
     readonly id: number
     readonly name: string
@@ -44,6 +53,7 @@ export interface ProductResponseDTO {
     // -------------------------------------------
     readonly sellerId: number
     readonly categoryId: number | null  // Phase 3 Step 2 - Category relation
+    readonly images: ProductImageDTO[]
     readonly createdAt: string // ISO 8601
     readonly updatedAt: string // ISO 8601
 }

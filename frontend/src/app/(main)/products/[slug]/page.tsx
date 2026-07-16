@@ -83,7 +83,7 @@ export default function ProductDetailPage() {
       currentPrice: product.price,
       quantity,
       image: product.images?.[0]?.url || '',
-      stock: product.inventory?.availableStock || 0,
+      stock: product.availableStock || 0,
       isAvailable: product.availableStock > 0,
     });
 
@@ -114,8 +114,8 @@ export default function ProductDetailPage() {
   }
 
   const images = product.images || [];
-  const currentImage = images[selectedImage] || { url: '/placeholder.png', alt: product.name };
-  const stock = product.inventory?.availableStock || 0;
+  const currentImage = images[selectedImage] || { url: '/placeholder.svg', alt: product.name };
+  const stock = product.availableStock || 0;
 
   return (
     <div className="bg-secondary-50 min-h-screen pb-12">
@@ -200,7 +200,7 @@ export default function ProductDetailPage() {
                   >
                     -
                   </button>
-                  <span className="px-4 py-2 min-w-[60px] text-center font-medium">{quantity}</span>
+                  <span className="px-4 py-2 min-w-15 text-center font-medium text-secondary-700">{quantity}</span>
                   <button
                     onClick={() => setQuantity(Math.min(stock, quantity + 1))}
                     className="px-4 py-2 text-secondary-600 hover:bg-secondary-100 transition-colors"

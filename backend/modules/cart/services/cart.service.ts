@@ -84,40 +84,33 @@ export const CartService = {
         })
       }
 
-      // 2b: Check if product already in cart
-      const existingItem = await tx.cartItem.findFirst({
-        where: { cartId: cart.id, productId },
-      })
-
       let action: "CREATED" | "INCREMENTED"
 
-      if (existingItem) {
-        // 2c: Increment quantity
-        const newQuantity = existingItem.quantity + quantity
+      // Use upsert to avoid race condition
+      // If product exists in cart, increment; otherwise create new
+      CartRules.assertQuantityWithinLimit(quantity)
 
-        // Business validation - total quantity must be within limit
-        CartRules.assertTotalQuantityWithinLimit(existingItem.quantity, quantity)
-
-        await tx.cartItem.update({
-          where: { id: existingItem.id },
-          data: { quantity: newQuantity },
-        })
-
-        action = "INCREMENTED"
-      } else {
-        // 2d: Create new CartItem
-        CartRules.assertQuantityWithinLimit(quantity)
-
-        await tx.cartItem.create({
-          data: {
+      const upsertResult = await tx.cartItem.upsert({
+        where: {
+          cartId_productId: {
             cartId: cart.id,
             productId,
-            quantity,
           },
-        })
+        },
+        create: {
+          cartId: cart.id,
+          productId,
+          quantity,
+        },
+        update: {
+          quantity: { increment: quantity },
+        },
+      })
 
-        action = "CREATED"
-      }
+      // Determine action based on whether it was created or updated
+      // We can't directly know from upsert result, so check original count
+      const wasCreated = upsertResult.quantity === quantity
+      action = wasCreated ? "CREATED" : "INCREMENTED"
 
       // Step 3: Fetch updated cart with all items
       const updatedCart = await tx.cart.findUnique({

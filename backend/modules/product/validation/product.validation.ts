@@ -10,8 +10,9 @@ export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sortBy: z.enum(["name", "price", "createdAt", "stock"]).default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc")
-}) 
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  category: z.coerce.number().int().positive().optional() // Filter by category ID
+})
 
 export type PaginationQueryInput = z.infer<typeof paginationQuerySchema>
 
