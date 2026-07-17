@@ -8,27 +8,31 @@
  * - Items with images and quantities
  * - Action buttons including return/refund
  * - Total calculation
+ * - Return modal for DELIVERED orders
  */
 
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
-import { ChevronRight, MessageCircle, Store, RotateCcw, Package, X, Check } from 'lucide-react';
+import { ChevronRight, Store, RotateCcw, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDate } from '@/lib/utils/date';
-import type { Order } from '@/types/api';
+import type { Order, OrderStatus } from '@/types/api';
+import { orderService } from '@/services/order.service';
+import { getNextStatus } from '@/lib/orders/order-status';
 import { OrderStatusBadge } from './order-status-badge';
 
 interface OrderCardProps {
-  order: Order;
-  variant?: 'default' | 'shopee';
-  onReturnItem?: (orderId: number, itemId: string) => void;
+  readonly order: Order;
+  readonly variant?: 'default' | 'shopee';
+  readonly onStatusUpdate?: (orderId: number, newStatus: OrderStatus) => void;
+  readonly onRefresh?: () => void;
 }
 
-export function OrderCard({ order, variant = 'default', onReturnItem }: OrderCardProps) {
+export function OrderCard({ order, variant = 'default', onStatusUpdate, onRefresh }: Readonly<OrderCardProps>) {
   if (variant === 'shopee') {
-    return <ShopeeOrderCard order={order} onReturnItem={onReturnItem} />;
+    return <ShopeeOrderCard order={order} onStatusUpdate={onStatusUpdate} onRefresh={onRefresh} />;
   }
   return <DefaultOrderCard order={order} />;
 }
@@ -36,10 +40,25 @@ export function OrderCard({ order, variant = 'default', onReturnItem }: OrderCar
 /**
  * Shopee-style Order Card with enhanced UI
  */
-function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?: (orderId: number, itemId: string) => void }) {
+interface ShopeeOrderCardProps {
+  readonly order: Order;
+  readonly onStatusUpdate?: (orderId: number, newStatus: OrderStatus) => void;
+  readonly onRefresh?: () => void;
+}
+
+function ShopeeOrderCard({ order, onStatusUpdate, onRefresh }: Readonly<ShopeeOrderCardProps>) {
   const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const [returningItems, setReturningItems] = useState<Set<string>>(new Set());
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
+
+  // Return modal state
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'next' | 'confirm' | null>(null);
 
   const handleReturnToggle = (itemId: string) => {
     setReturningItems((prev) => {
@@ -56,7 +75,7 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
   const handleConfirmReturn = () => {
     if (showReturnConfirm) {
       returningItems.forEach((itemId) => {
-        onReturnItem?.(order.id, itemId);
+        onStatusUpdate?.(order.id, itemId as unknown as OrderStatus);
       });
       setReturningItems(new Set());
       setShowReturnConfirm(false);
@@ -66,6 +85,89 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
   };
 
   const canReturn = order.status === 'COMPLETED' || order.status === 'DELIVERED';
+
+  // Handle "Next Proses" action
+  const handleNextProses = async () => {
+    setConfirmAction('next');
+    setShowConfirmModal(true);
+  };
+
+  const confirmNextProses = async () => {
+    setIsLoading(true);
+    setShowConfirmModal(false);
+    try {
+      const nextStatus = getNextStatus(order.status);
+      if (nextStatus) {
+        await orderService.updateOrderStatus(order.id, nextStatus);
+        onStatusUpdate?.(order.id, nextStatus);
+        onRefresh?.();
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle "Pesanan Diterima" action
+  const handlePesananDiterima = () => {
+    setConfirmAction('confirm');
+    setShowConfirmModal(true);
+  };
+
+  const confirmPesananDiterima = async () => {
+    setIsLoading(true);
+    setShowConfirmModal(false);
+    try {
+      await orderService.updateOrderStatus(order.id, 'COMPLETED');
+      onStatusUpdate?.(order.id, 'COMPLETED');
+      onRefresh?.();
+    } catch (error) {
+      console.error('Failed to confirm receipt:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle "Return Pesanan" action
+  const handleReturnPesanan = () => {
+    setShowReturnModal(true);
+  };
+
+  const confirmReturnPesanan = async () => {
+    setIsLoading(true);
+    try {
+      await orderService.cancelOrder(order.id, returnReason);
+      onStatusUpdate?.(order.id, 'CANCELLED');
+      setShowReturnModal(false);
+      setReturnReason('');
+      onRefresh?.();
+    } catch (error) {
+      console.error('Failed to return order:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle "Batalkan" action
+  const handleBatal = async () => {
+    setIsLoading(true);
+    try {
+      await orderService.cancelOrder(order.id);
+      onStatusUpdate?.(order.id, 'CANCELLED');
+      onRefresh?.();
+    } catch (error) {
+      console.error('Failed to cancel order:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle "Bayar Sekarang" action - Navigate to payment page
+  const handleBayarSekarang = () => {
+    // TODO: Implement payment page navigation for order.id
+    console.log('Navigate to payment page for order:', order.id);
+  };
 
   return (
     <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -83,11 +185,11 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
         <div className="divide-y divide-secondary-100">
           {order.items.map((item, index) => (
             <div
-              key={item.id || `item-${index}`}
+              key={item.id ? String(item.id) : `item-${index}`}
               className="p-4 flex gap-4 hover:bg-secondary-50/50 transition-colors"
             >
               {/* Product Image */}
-              <div className="w-20 h-20 rounded-lg bg-secondary-100 overflow-hidden relative flex-shrink-0">
+              <div className="w-20 h-20 rounded-lg bg-secondary-100 overflow-hidden relative shrink-0">
                 {item.productImage ? (
                   <Image
                     src={item.productImage}
@@ -102,7 +204,7 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
                   </div>
                 )}
                 {/* Return checkbox overlay */}
-                {canReturn && returningItems.has(item.id || `item-${index}`) && (
+                {canReturn && returningItems.has(String(String(item.id)) || `item-${index}`) && (
                   <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
                     <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
@@ -127,23 +229,23 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleReturnToggle(item.id || `item-${index}`);
+                    handleReturnToggle(item.id ? String(item.id) : `item-${index}`);
                   }}
                   className={cn(
-                    'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                    returningItems.has(item.id || `item-${index}`)
+                    'w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+                    returningItems.has(item.id ? String(item.id) : `item-${index}`)
                       ? 'border-green-500 bg-green-500 text-white'
                       : 'border-secondary-300 hover:border-secondary-400'
                   )}
                 >
-                  {returningItems.has(item.id || `item-${index}`) && (
+                  {returningItems.has(item.id ? String(item.id) : `item-${index}`) && (
                     <Check className="w-4 h-4" />
                   )}
                 </button>
               )}
 
               {/* Subtotal */}
-              <div className="text-right flex-shrink-0">
+              <div className="text-right shrink-0">
                 <p className="font-semibold text-secondary-900">
                   {formatCurrency(item.subtotal)}
                 </p>
@@ -208,8 +310,92 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
               Ajukan Pengembalian ({returningItems.size})
             </button>
           )}
-          <ActionButtons status={order.status} orderId={order.id} />
+          <ActionButtons
+            status={order.status}
+            orderId={order.id}
+            isLoading={isLoading}
+            onNextProses={handleNextProses}
+            onPesananDiterima={handlePesananDiterima}
+            onReturnPesanan={handleReturnPesanan}
+            onBatal={handleBatal}
+            onBayarSekarang={handleBayarSekarang}
+          />
         </div>
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-blue-900 mb-1">
+                  {confirmAction === 'next' ? 'Lanjut ke Proses Berikutnya?' : 'Konfirmasi Pesanan Diterima?'}
+                </h4>
+                <p className="text-sm text-blue-700 mb-3">
+                  {confirmAction === 'next'
+                    ? 'Status pesanan akan berubah menjadi langkah berikutnya dalam proses.'
+                    : 'Pastikan Anda sudah menerima pesanan dengan benar.'}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={confirmAction === 'next' ? confirmNextProses : confirmPesananDiterima}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Ya, Lanjutkan
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Return Modal */}
+        {showReturnModal && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-red-900 mb-2">
+                  Return Pesanan
+                </h4>
+                <p className="text-sm text-red-700 mb-3">
+                  Jelaskan alasan mengapa Anda ingin mengembalikan pesanan ini.
+                </p>
+                <textarea
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  placeholder="Contoh: Barang tidak sesuai dengan foto, produk rusak, dll..."
+                  className="w-full p-3 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                  rows={3}
+                />
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      setShowReturnModal(false);
+                      setReturnReason('');
+                    }}
+                    className="flex-1 px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={confirmReturnPesanan}
+                    disabled={isLoading || !returnReason.trim()}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Mengirim...' : 'Kirim Return'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -218,7 +404,7 @@ function ShopeeOrderCard({ order, onReturnItem }: { order: Order; onReturnItem?:
 /**
  * Default Style Order Card
  */
-function DefaultOrderCard({ order }: { order: Order }) {
+function DefaultOrderCard({ order }: Readonly<{ order: Order }>) {
   return (
     <Link href={`/orders/${order.id}`}>
       <article className="bg-white rounded-lg border border-secondary-200 p-4 hover:border-primary-300 hover:shadow-md transition-all">
@@ -238,7 +424,7 @@ function DefaultOrderCard({ order }: { order: Order }) {
         {/* Items preview */}
         <div className="space-y-2 mb-4">
           {order.items.slice(0, 2).map((item, index) => (
-            <div key={item.id || `item-${index}`} className="flex items-center gap-3">
+            <div key={item.id ? String(item.id) : `item-${index}`} className="flex items-center gap-3">
               {item.productImage ? (
                 <Image
                   src={item.productImage}
@@ -286,7 +472,7 @@ function DefaultOrderCard({ order }: { order: Order }) {
 /**
  * Order Status Button
  */
-function OrderStatusButton({ status }: { status: string }) {
+function OrderStatusButton({ status }: Readonly<{ status: string }>) {
   const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
     DRAFT: { bg: 'bg-secondary-300', text: 'text-white', label: 'Draft' },
     WAITING_PAYMENT: { bg: 'bg-amber-500', text: 'text-white', label: 'Menunggu Pembayaran' },
@@ -310,89 +496,99 @@ function OrderStatusButton({ status }: { status: string }) {
 }
 
 /**
- * Action Buttons based on order status
+ * Action Buttons Props
  */
-function ActionButtons({ status, orderId }: { status: string; orderId: number }) {
+interface ActionButtonsProps {
+  readonly status: string;
+  readonly orderId: number;
+  readonly isLoading?: boolean;
+  readonly onNextProses?: () => void;
+  readonly onPesananDiterima?: () => void;
+  readonly onReturnPesanan?: () => void;
+  readonly onBatal?: () => void;
+  readonly onBayarSekarang?: () => void;
+}
+
+function ActionButtons({
+  status,
+  orderId,
+  isLoading = false,
+  onNextProses,
+  onPesananDiterima,
+  onReturnPesanan,
+  onBatal,
+  onBayarSekarang,
+}: Readonly<ActionButtonsProps>) {
   switch (status) {
     case 'DRAFT':
-    case 'PENDING':
+      // No actions - display only
+      return null;
+
     case 'WAITING_PAYMENT':
+      // User exited before payment - show Pay Now and Cancel
       return (
         <>
-          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+          <button
+            onClick={onBayarSekarang}
+            disabled={isLoading}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+          >
             Bayar Sekarang
           </button>
-          <button className="px-4 py-2 border border-secondary-300 text-secondary-600 rounded-lg text-sm font-medium hover:bg-secondary-50 transition-colors">
+          <button
+            onClick={onBatal}
+            disabled={isLoading}
+            className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
             Batalkan
           </button>
         </>
       );
 
-    case 'PROCESSING':
     case 'PAID':
-      return (
-        <>
-          <Link
-            href={`/orders/${orderId}`}
-            className="px-4 py-2 border border-secondary-300 text-secondary-700 rounded-lg text-sm font-medium hover:bg-secondary-50 transition-colors flex items-center gap-1"
-          >
-            Lihat Detail
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </>
-      );
+      // No user action - auto transition or admin handles
+      return null;
 
-    case 'SHIPPED':
+    case 'PROCESSING':
+    case 'SHIPPING':
+      // Show Next Proses button for both PROCESSING and SHIPPING
       return (
-        <>
-          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
-            Konfirmasi Terima
-          </button>
-          <button className="px-4 py-2 border border-secondary-300 text-secondary-600 rounded-lg text-sm font-medium hover:bg-secondary-50 transition-colors flex items-center gap-1">
-            Lacak Pengiriman
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </>
+        <button
+          onClick={onNextProses}
+          disabled={isLoading}
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+        >
+          Next Proses
+          <ChevronRight className="w-4 h-4" />
+        </button>
       );
 
     case 'DELIVERED':
+      // Show "Pesanan Diterima" and "Return Pesanan" buttons
       return (
         <>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
-            Konfirmasi Selesai
-          </button>
-          <Link
-            href={`/orders/${orderId}`}
-            className="px-4 py-2 border border-secondary-300 text-secondary-700 rounded-lg text-sm font-medium hover:bg-secondary-50 transition-colors flex items-center gap-1"
+          <button
+            onClick={onPesananDiterima}
+            disabled={isLoading}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
           >
-            Detail
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+            Pesanan Diterima
+          </button>
+          <button
+            onClick={onReturnPesanan}
+            disabled={isLoading}
+            className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            Return Pesanan
+          </button>
         </>
       );
 
     case 'COMPLETED':
-      return (
-        <>
-          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors flex items-center gap-1">
-            Beli Lagi
-          </button>
-          <button className="px-4 py-2 border border-orange-300 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors flex items-center gap-1">
-            <RotateCcw className="w-4 h-4" />
-            Return/Refund
-          </button>
-        </>
-      );
-
     case 'CANCELLED':
     case 'EXPIRED':
-      return (
-        <>
-          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
-            Beli Lagi
-          </button>
-        </>
-      );
+      // Terminal states - no actions
+      return null;
 
     default:
       return (
@@ -400,7 +596,7 @@ function ActionButtons({ status, orderId }: { status: string; orderId: number })
           href={`/orders/${orderId}`}
           className="px-4 py-2 border border-secondary-300 text-secondary-700 rounded-lg text-sm font-medium hover:bg-secondary-50 transition-colors flex items-center gap-1"
         >
-          Lihat Detail
+          Detail
           <ChevronRight className="w-4 h-4" />
         </Link>
       );

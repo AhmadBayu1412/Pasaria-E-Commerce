@@ -143,6 +143,7 @@ export function getTimelineSteps(status: OrderStatus): StatusConfig[] {
 
 /**
  * Action Matrix - Mendefinisikan aksi per status
+ * User-facing actions: WAITING_PAYMENT, PROCESSING, SHIPPING, DELIVERED
  */
 export interface OrderAction {
   id: string;
@@ -152,24 +153,25 @@ export interface OrderAction {
 }
 
 export const ORDER_ACTIONS: Record<OrderStatus, OrderAction[]> = {
-  DRAFT: [
-    { id: 'checkout', label: 'Lanjutkan Pembayaran', variant: 'primary' },
-    { id: 'cancel', label: 'Batalkan', variant: 'danger' },
-  ],
+  DRAFT: [], // No actions - display only
   WAITING_PAYMENT: [
     { id: 'pay', label: 'Bayar Sekarang', variant: 'primary' },
     { id: 'cancel', label: 'Batalkan', variant: 'danger' },
   ],
-  PAID: [{ id: 'invoice', label: 'Lihat Invoice', variant: 'secondary' }],
-  PROCESSING: [{ id: 'track', label: 'Lacak Pesanan', variant: 'secondary' }],
-  SHIPPING: [{ id: 'track', label: 'Lacak Pengiriman', variant: 'secondary' }],
-  DELIVERED: [
-    { id: 'confirm', label: 'Konfirmasi Terima', variant: 'primary' },
-    { id: 'complaint', label: 'Keluhan', variant: 'secondary' },
+  PAID: [], // No user action - auto transition to PROCESSING
+  PROCESSING: [
+    { id: 'next', label: 'Next Proses', variant: 'primary' },
   ],
-  COMPLETED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
-  EXPIRED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
-  CANCELLED: [{ id: 'reorder', label: 'Pesan Lagi', variant: 'primary' }],
+  SHIPPING: [
+    { id: 'next', label: 'Next Proses', variant: 'primary' },
+  ],
+  DELIVERED: [
+    { id: 'confirm', label: 'Pesanan Diterima', variant: 'primary' },
+    { id: 'return', label: 'Return Pesanan', variant: 'danger' },
+  ],
+  COMPLETED: [], // Terminal - no actions
+  EXPIRED: [], // Terminal - no actions
+  CANCELLED: [], // Terminal - no actions
 };
 
 /**
@@ -184,4 +186,20 @@ export function hasOrderAction(status: OrderStatus, actionId: string): boolean {
  */
 export function getOrderActions(status: OrderStatus): OrderAction[] {
   return ORDER_ACTIONS[status];
+}
+
+/**
+ * Next Status Map - Determines the next status in the flow
+ */
+export const NEXT_STATUS_MAP: Partial<Record<OrderStatus, OrderStatus>> = {
+  PROCESSING: 'SHIPPING',
+  SHIPPING: 'DELIVERED',
+  DELIVERED: 'COMPLETED',
+};
+
+/**
+ * Get next status for a given status
+ */
+export function getNextStatus(current: OrderStatus): OrderStatus | null {
+  return NEXT_STATUS_MAP[current] ?? null;
 }

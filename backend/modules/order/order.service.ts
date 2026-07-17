@@ -20,6 +20,7 @@ import type {
   OrderItemData,
 } from './order.types.js';
 import type { OrderStatus } from './order-lifecycle.types.js';
+import { OrderStateTransitions } from './order-lifecycle.types.js';
 
 export const OrderService = {
   /**
@@ -59,7 +60,7 @@ export const OrderService = {
     const order = await prisma.order.create({
       data: {
         userId: checkoutPreview.summary.userId,
-        status: 'DRAFT',
+        status: 'PROCESSING',
         totalQuantity: totals.totalQuantity,
         totalItemCount: totals.totalItemCount,
         subtotal: totals.subtotal,
@@ -132,7 +133,7 @@ export const OrderService = {
     const order = await tx.order.create({
       data: {
         userId: checkoutPreview.summary.userId,
-        status: 'DRAFT',
+        status: 'PROCESSING',
         totalQuantity: totals.totalQuantity,
         totalItemCount: totals.totalItemCount,
         subtotal: totals.subtotal,
@@ -213,5 +214,86 @@ export const OrderService = {
     });
 
     return orders.map((order) => OrderMapper.toOrderDraft(order));
+  },
+
+  /**
+   * Update Order Status
+   *
+   * Updates order status with state machine validation.
+   * Only allows valid transitions.
+   */
+  async updateStatus(orderId: number, newStatus: OrderStatus): Promise<OrderDraft> {
+    // Get current order
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+
+    if (!order) {
+      throw new Error('ORDER_NOT_FOUND');
+    }
+
+    // Validate state transition
+    const currentStatus = order.status as OrderStatus;
+    const allowedTransitions = OrderStateTransitions[currentStatus]?.canTransitionTo ?? [];
+
+    if (!allowedTransitions.includes(newStatus)) {
+      throw new Error(`INVALID_STATE_TRANSITION: Cannot transition from ${currentStatus} to ${newStatus}`);
+    }
+
+    // Update order
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: newStatus },
+      include: { items: true },
+    });
+
+    return OrderMapper.toOrderDraft(updatedOrder);
+  },
+
+  /**
+   * Cancel Order
+   *
+   * Cancels an order if it's in a cancellable state.
+   */
+  async cancelOrder(
+    orderId: number,
+    userId: number,
+    reason?: string
+  ): Promise<OrderDraft> {
+    // Get current order
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+
+    if (!order) {
+      throw new Error('ORDER_NOT_FOUND');
+    }
+
+    // Check ownership
+    if (order.userId !== userId) {
+      throw new Error('FORBIDDEN');
+    }
+
+    // Validate state transition
+    const currentStatus = order.status as OrderStatus;
+    const allowedTransitions = OrderStateTransitions[currentStatus]?.canTransitionTo ?? [];
+
+    if (!allowedTransitions.includes('CANCELLED')) {
+      throw new Error(`INVALID_STATE_TRANSITION: Cannot cancel order in ${currentStatus} state`);
+    }
+
+    // Update order
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'CANCELLED',
+        // Could store cancellation reason in a separate field if needed
+      },
+      include: { items: true },
+    });
+
+    return OrderMapper.toOrderDraft(updatedOrder);
   },
 } as const;

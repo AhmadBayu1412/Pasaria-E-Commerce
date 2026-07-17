@@ -21,7 +21,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    return Promise.reject(error);
+    throw error;
   }
 );
 
@@ -48,7 +48,8 @@ apiClient.interceptors.response.use(
       console.error('Network error:', error.message);
     }
     
-    return Promise.reject(error);
+    // Re-throw for global error handler
+    throw error;
   }
 );
 

@@ -15,6 +15,7 @@ import { OrderCard } from '@/components/features/orders/order-card';
 import { OrderEmpty } from '@/components/features/orders/order-empty';
 import { OrderLoading } from '@/components/features/orders/order-loading';
 import { Pagination } from '@/components/ui/pagination';
+import type { OrderStatus } from '@/types/api';
 
 type OrderTab = 'all' | 'pending' | 'processing' | 'shipped' | 'completed' | 'cancelled';
 
@@ -37,11 +38,11 @@ function OrdersPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Map tab to backend status filter
-  const getStatusFilter = (tab: OrderTab): string | undefined => {
+  const getStatusFilter = (tab: OrderTab): string | string[] | undefined => {
     switch (tab) {
       case 'pending': return 'WAITING_PAYMENT';
-      case 'processing': return 'PROCESSING';
-      case 'shipped': return 'SHIPPING';
+      case 'processing': return 'PROCESSING'; // Only PROCESSING, not SHIPPING
+      case 'shipped': return 'DELIVERED';
       case 'completed': return 'COMPLETED';
       case 'cancelled': return 'CANCELLED';
       default: return undefined;
@@ -59,7 +60,7 @@ function OrdersPageContent() {
       // Get orders with status filter from backend
       const response = await orderService.getOrders({
         page: pageNum,
-        status: status ? (status as "WAITING_PAYMENT" | "PROCESSING" | "SHIPPING" | "COMPLETED" | "CANCELLED") : undefined,
+        status: status as OrderStatus | undefined,
       });
 
       orderStoreActions.setOrders(response.items, {
@@ -82,7 +83,14 @@ function OrdersPageContent() {
   // Update URL when tab changes
   const handleTabChange = (tab: OrderTab) => {
     setActiveTab(tab);
-    router.push(`/orders${tab !== 'all' ? `?tab=${tab}` : ''}`, { scroll: false });
+    const url = tab === 'all' ? '/orders' : `/orders?tab=${tab}`;
+    router.push(url, { scroll: false });
+  };
+
+  // Handle status update from OrderCard
+  const handleStatusUpdate = (orderId: number, newStatus: OrderStatus) => {
+    // Update local state
+    orderStoreActions.updateOrderStatus(orderId, newStatus);
   };
 
   // Filter orders locally for search
@@ -170,14 +178,24 @@ function OrdersPageContent() {
         {/* Orders List */}
         {isLoading ? (
           <OrderLoading />
-        ) : filteredOrders.length === 0 ? (
-          <OrderEmpty activeTab={activeTab} />
         ) : (
-          <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <OrderCard key={order.id} order={order} variant="shopee" />
-            ))}
-          </div>
+          <>
+            {filteredOrders.length === 0 ? (
+              <OrderEmpty activeTab={activeTab} />
+            ) : (
+              <div className="space-y-4">
+                {filteredOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    variant="shopee"
+                    onStatusUpdate={handleStatusUpdate}
+                    onRefresh={() => fetchOrders(1)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {/* Pagination */}

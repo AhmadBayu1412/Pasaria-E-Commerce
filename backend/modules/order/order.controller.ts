@@ -11,7 +11,9 @@ import type { AuthenticatedUser } from '../../shared/session/session.types.js';
 import { BusinessError } from '../../shared/errors/business.error.js';
 import type { OrderStatus } from './order-lifecycle.types.js';
 
-// ----- Error Code to HTTP Status Mapping -----
+// ============================================================
+// ERROR STATUS MAP
+// ============================================================
 const ERROR_STATUS_MAP: Record<string, number> = {
   CART_EMPTY: 400,
   CHECKOUT_NOT_VALID: 400,
@@ -19,6 +21,9 @@ const ERROR_STATUS_MAP: Record<string, number> = {
   ORDER_EMPTY: 400,
   PRODUCT_NOT_FOUND: 404,
   UNAUTHORIZED: 401,
+  INVALID_STATE_TRANSITION: 400,
+  ORDER_NOT_FOUND: 404,
+  FORBIDDEN: 403,
 };
 
 // ----- Controller Implementation -----
@@ -293,6 +298,179 @@ export const OrderController = {
         });
         return;
       }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          order: {
+            id: order.id,
+            userId: order.userId,
+            status: order.status,
+            items: order.items,
+            totalQuantity: order.totalQuantity,
+            totalItemCount: order.totalItemCount,
+            subtotal: order.subtotal,
+            shippingFee: order.shippingFee,
+            tax: order.tax,
+            total: order.total,
+            shippingName: order.shippingName,
+            shippingPhone: order.shippingPhone,
+            shippingAddress: order.shippingAddress,
+            shippingCity: order.shippingCity,
+            shippingPostalCode: order.shippingPostalCode,
+            createdAt:
+              order.createdAt instanceof Date
+                ? order.createdAt.toISOString()
+                : order.createdAt,
+            updatedAt:
+              order.updatedAt instanceof Date
+                ? order.updatedAt.toISOString()
+                : order.updatedAt,
+          },
+        },
+      });
+    } catch (error) {
+      OrderController.handleError(error, res);
+    }
+  },
+  /**
+   * PATCH /orders/:id/status
+   *
+   * Update order status (Next Phase)
+   * Only accessible by admin
+   */
+  async updateStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user as AuthenticatedUser | undefined;
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      // Parse order ID
+      const orderIdStr = req.params.id;
+      const orderId = parseInt(
+        Array.isArray(orderIdStr) ? orderIdStr[0] : orderIdStr,
+        10
+      );
+      if (isNaN(orderId) || orderId <= 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid order ID',
+          },
+        });
+        return;
+      }
+
+      // Get new status from body
+      const { status } = req.body;
+      if (!status) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Status is required',
+          },
+        });
+        return;
+      }
+
+      // Update status via service
+      const order = await OrderService.updateStatus(orderId, status);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          order: {
+            id: order.id,
+            userId: order.userId,
+            status: order.status,
+            items: order.items,
+            totalQuantity: order.totalQuantity,
+            totalItemCount: order.totalItemCount,
+            subtotal: order.subtotal,
+            shippingFee: order.shippingFee,
+            tax: order.tax,
+            total: order.total,
+            shippingName: order.shippingName,
+            shippingPhone: order.shippingPhone,
+            shippingAddress: order.shippingAddress,
+            shippingCity: order.shippingCity,
+            shippingPostalCode: order.shippingPostalCode,
+            createdAt:
+              order.createdAt instanceof Date
+                ? order.createdAt.toISOString()
+                : order.createdAt,
+            updatedAt:
+              order.updatedAt instanceof Date
+                ? order.updatedAt.toISOString()
+                : order.updatedAt,
+          },
+        },
+      });
+    } catch (error) {
+      OrderController.handleError(error, res);
+    }
+  },
+
+  /**
+   * POST /orders/:id/cancel
+   *
+   * Cancel/Return order
+   * Requires authentication
+   */
+  async cancelOrder(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const user = req.user as AuthenticatedUser | undefined;
+      if (!user?.id) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+        });
+        return;
+      }
+
+      // Parse order ID
+      const orderIdStr = req.params.id;
+      const orderId = parseInt(
+        Array.isArray(orderIdStr) ? orderIdStr[0] : orderIdStr,
+        10
+      );
+      if (isNaN(orderId) || orderId <= 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid order ID',
+          },
+        });
+        return;
+      }
+
+      // Get reason from body (optional)
+      const { reason } = req.body;
+
+      // Cancel order via service
+      const order = await OrderService.cancelOrder(orderId, user.id, reason);
 
       res.status(200).json({
         success: true,

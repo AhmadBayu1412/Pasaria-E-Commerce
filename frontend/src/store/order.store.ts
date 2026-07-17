@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { Order } from '@/types/api';
+import type { Order, OrderStatus } from '@/types/api';
 import { OrderError } from '@/services/order.service';
 
 interface OrderState {
@@ -22,11 +22,16 @@ interface OrderState {
   error: OrderError | null;
 }
 
+// Combined type for store with actions
+type OrderStore = OrderState & {
+  updateOrderStatus: (orderId: number, newStatus: OrderStatus) => void;
+};
+
 /**
  * Store only manages state, not HTTP
  * HTTP calls remain in OrderService
  */
-export const useOrderStore = create<OrderState>()(() => ({
+export const useOrderStore = create<OrderStore>()((set) => ({
   // Initial state
   orders: [],
   selectedOrder: null,
@@ -35,6 +40,18 @@ export const useOrderStore = create<OrderState>()(() => ({
   totalItems: 0,
   isLoading: false,
   error: null,
+
+  // Action
+  updateOrderStatus: (orderId: number, newStatus: OrderStatus) =>
+    set((state) => ({
+      orders: state.orders.map((order) =>
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ),
+      selectedOrder:
+        state.selectedOrder?.id === orderId
+          ? { ...state.selectedOrder, status: newStatus }
+          : state.selectedOrder,
+    })),
 }));
 
 // Action helpers
@@ -75,6 +92,9 @@ export const orderStoreActions = {
       isLoading: false,
       error: null,
     }),
+
+  updateOrderStatus: (orderId: number, newStatus: OrderStatus) =>
+    useOrderStore.getState().updateOrderStatus(orderId, newStatus),
 };
 
 // Selectors

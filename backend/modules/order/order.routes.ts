@@ -80,7 +80,7 @@ router.get(
  *   "success": true,
  *   "data": {
  *     "orderId": number,
- *     "status": "DRAFT",
+ *     "status": "PROCESSING",
  *     "totalQuantity": number,
  *     "totalItemCount": number,
  *     "subtotal": number,
@@ -98,6 +98,64 @@ router.post(
   "/draft",
   authenticate,
   OrderController.createDraft
+)
+
+/**
+ * PATCH /orders/:id/status
+ *
+ * Update order status (Next Proses)
+ * Requires authentication
+ *
+ * Request Body:
+ * {
+ *   "status": "PROCESSING" | "SHIPPING" | "DELIVERED" | "COMPLETED"
+ * }
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": { "order": Order }
+ * }
+ *
+ * Errors:
+ * - 401 Unauthorized
+ * - 403 Forbidden (not owner)
+ * - 404 Not Found
+ * - 400 Invalid state transition
+ */
+router.patch(
+  "/:id/status",
+  authenticate,
+  OrderController.updateStatus
+)
+
+/**
+ * POST /orders/:id/cancel
+ *
+ * Cancel/Return order
+ * Requires authentication
+ *
+ * Request Body:
+ * {
+ *   "reason": string (optional - reason for cancellation)
+ * }
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": { "order": Order }
+ * }
+ *
+ * Errors:
+ * - 401 Unauthorized
+ * - 403 Forbidden (not owner)
+ * - 404 Not Found
+ * - 400 Invalid state transition
+ */
+router.post(
+  "/:id/cancel",
+  authenticate,
+  OrderController.cancelOrder
 )
 
 export default router

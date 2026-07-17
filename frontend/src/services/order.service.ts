@@ -151,6 +151,42 @@ export const orderService = {
 
     return data.order;
   },
+
+  /**
+   * Update order status
+   * Endpoint: PATCH /orders/:id/status
+   */
+  async updateOrderStatus(orderId: number, newStatus: OrderStatus): Promise<Order> {
+    const response = await apiClient.patch<{ success: boolean; data?: { order: Order }; error?: { code: string; message: string } }>(
+      `/orders/${orderId}/status`,
+      { status: newStatus }
+    );
+    const { success, data, error } = response.data;
+
+    if (!success || !data?.order) {
+      throw new Error(error?.message || 'Failed to update order status');
+    }
+
+    return data.order;
+  },
+
+  /**
+   * Cancel order
+   * Endpoint: POST /orders/:id/cancel
+   */
+  async cancelOrder(orderId: number, reason?: string): Promise<Order> {
+    const response = await apiClient.post<{ success: boolean; data?: { order: Order }; error?: { code: string; message: string } }>(
+      `/orders/${orderId}/cancel`,
+      { reason }
+    );
+    const { success, data, error } = response.data;
+
+    if (!success || !data?.order) {
+      throw new Error(error?.message || 'Failed to cancel order');
+    }
+
+    return data.order;
+  },
 } as const;
 
 // ============ ORDER ERROR HANDLING ============

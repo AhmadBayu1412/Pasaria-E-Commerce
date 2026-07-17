@@ -13,7 +13,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  ArrowLeft, MapPin, Truck, CreditCard, Package,
+  ArrowLeft, Truck, CreditCard, Package,
   Check, Clock, RotateCcw, X, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -22,11 +22,11 @@ import { formatDate } from '@/lib/utils/date';
 import type { Order } from '@/types/api';
 
 interface OrderDetailProps {
-  order: Order;
-  onReturnItem?: (orderId: number, itemId: string) => void;
+  readonly order: Order;
+  readonly onReturnItem?: (orderId: number, itemId: string) => void;
 }
 
-export function OrderDetail({ order, onReturnItem }: OrderDetailProps) {
+export function OrderDetail({ order, onReturnItem }: Readonly<OrderDetailProps>) {
   const [returningItems, setReturningItems] = useState<Set<string>>(new Set());
   const [showReturnConfirm, setShowReturnConfirm] = useState(false);
 
@@ -56,6 +56,14 @@ export function OrderDetail({ order, onReturnItem }: OrderDetailProps) {
 
   const canReturn = order.status === 'COMPLETED' || order.status === 'DELIVERED';
 
+  // Helper function for status banner class
+  const getStatusBannerClass = (status: string): string => {
+    if (status === 'COMPLETED') return 'bg-green-500 text-white';
+    if (status === 'CANCELLED') return 'bg-red-500 text-white';
+    if (status === 'DRAFT') return 'bg-secondary-400 text-white';
+    return 'bg-primary-500 text-white';
+  };
+
   return (
     <div className="space-y-6">
       {/* Back Button */}
@@ -72,10 +80,7 @@ export function OrderDetail({ order, onReturnItem }: OrderDetailProps) {
         {/* Status Banner */}
         <div className={cn(
           'px-6 py-4 flex items-center justify-between',
-          order.status === 'COMPLETED' ? 'bg-green-500 text-white' :
-          order.status === 'CANCELLED' ? 'bg-red-500 text-white' :
-          order.status === 'DRAFT' ? 'bg-secondary-400 text-white' :
-          'bg-primary-500 text-white'
+          getStatusBannerClass(order.status)
         )}>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
@@ -123,7 +128,7 @@ export function OrderDetail({ order, onReturnItem }: OrderDetailProps) {
                   </div>
                 )}
                 {/* Return checkbox overlay */}
-                {canReturn && returningItems.has(item.id || `item-${index}`) && (
+                {canReturn && returningItems.has(item.id ? String(item.id) : `item-${index}`) && (
                   <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
                       <Check className="w-5 h-5 text-white" />
@@ -150,15 +155,15 @@ export function OrderDetail({ order, onReturnItem }: OrderDetailProps) {
               {/* Return Checkbox (only for completed orders) */}
               {canReturn && (
                 <button
-                  onClick={() => handleReturnToggle(item.id || `item-${index}`)}
+                  onClick={() => handleReturnToggle(item.id ? String(item.id) : `item-${index}`)}
                   className={cn(
                     'w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all self-center',
-                    returningItems.has(item.id || `item-${index}`)
+                    returningItems.has(item.id ? String(item.id) : `item-${index}`)
                       ? 'border-green-500 bg-green-500 text-white'
                       : 'border-secondary-300 hover:border-secondary-400'
                   )}
                 >
-                  {returningItems.has(item.id || `item-${index}`) ? (
+                  {returningItems.has(item.id ? String(item.id) : `item-${index}`) ? (
                     <Check className="w-5 h-5" />
                   ) : (
                     <RotateCcw className="w-4 h-4 text-secondary-400" />
@@ -316,7 +321,7 @@ export function OrderDetail({ order, onReturnItem }: OrderDetailProps) {
 /**
  * Order Timeline Component
  */
-function OrderTimeline({ status }: { status: string }) {
+function OrderTimeline({ status }: Readonly<{ status: string }>) {
   const steps = [
     { key: 'DRAFT', label: 'Draft', icon: Package },
     { key: 'WAITING_PAYMENT', label: 'Menunggu Bayar', icon: Clock },
@@ -330,6 +335,19 @@ function OrderTimeline({ status }: { status: string }) {
   const currentIndex = steps.findIndex(s => s.key === status);
   const isCancelled = status === 'CANCELLED' || status === 'EXPIRED';
 
+  // Helper functions to avoid nested ternary
+  const getStepIconClass = (isCancelledStep: boolean, isPast: boolean, isCurrent: boolean): string => {
+    if (isCancelledStep) return 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors bg-red-100 text-red-500';
+    if (isPast || isCurrent) return 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors bg-primary-500 text-white';
+    return 'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors bg-secondary-200 text-secondary-400';
+  };
+
+  const getStepLabelClass = (isCancelledStep: boolean, isPast: boolean, isCurrent: boolean): string => {
+    if (isCancelledStep) return 'text-xs mt-1 whitespace-nowrap text-red-500';
+    if (isPast || isCurrent) return 'text-xs mt-1 whitespace-nowrap text-secondary-900 font-medium';
+    return 'text-xs mt-1 whitespace-nowrap text-secondary-400';
+  };
+
   return (
     <div className="px-6 py-4 bg-secondary-50/50">
       <div className="flex items-center justify-between overflow-x-auto">
@@ -342,20 +360,10 @@ function OrderTimeline({ status }: { status: string }) {
             <div key={step.key} className="flex items-center">
               {/* Step */}
               <div className="flex flex-col items-center">
-                <div className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
-                  isCancelledStep ? 'bg-red-100 text-red-500' :
-                  isPast || isCurrent ? 'bg-primary-500 text-white' :
-                  'bg-secondary-200 text-secondary-400'
-                )}>
+                <div className={getStepIconClass(isCancelledStep, isPast, isCurrent)}>
                   <step.icon className="w-4 h-4" />
                 </div>
-                <span className={cn(
-                  'text-xs mt-1 whitespace-nowrap',
-                  isCancelledStep ? 'text-red-500' :
-                  isPast || isCurrent ? 'text-secondary-900 font-medium' :
-                  'text-secondary-400'
-                )}>
+                <span className={getStepLabelClass(isCancelledStep, isPast, isCurrent)}>
                   {step.label}
                 </span>
               </div>
@@ -388,7 +396,7 @@ function OrderTimeline({ status }: { status: string }) {
 /**
  * Status Icon Component
  */
-function StatusIcon({ status }: { status: string }) {
+function StatusIcon({ status }: Readonly<{ status: string }>) {
   switch (status) {
     case 'COMPLETED':
       return <Check className="w-6 h-6" />;

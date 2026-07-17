@@ -58,7 +58,7 @@ export const OrderStateTransitions = {
     canTransitionTo: ['DELIVERED', 'CANCELLED'] as const,
   },
   DELIVERED: {
-    canTransitionTo: ['COMPLETED'] as const,
+    canTransitionTo: ['COMPLETED', 'CANCELLED'] as const,
   },
   COMPLETED: {
     canTransitionTo: [] as const, // Terminal
