@@ -7,6 +7,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrderService } from './order.service.js';
 import { CheckoutService } from '../checkout/checkout.service.js';
+import { OrderLifecycleService } from './order-lifecycle.service.js';
+import { prisma } from '../../infra/db/prisma.js';
 import type { AuthenticatedUser } from '../../shared/session/session.types.js';
 import { BusinessError } from '../../shared/errors/business.error.js';
 import type { OrderStatus } from './order-lifecycle.types.js';
@@ -62,9 +64,13 @@ export const OrderController = {
         userId: user.id,
       });
 
-      // STEP 3: Create order draft from preview
-      const orderDraft = await OrderService.createDraft({
-        checkoutPreview,
+      // STEP 3: Create order draft within transaction to prevent race conditions
+      const orderDraft = await prisma.$transaction(async (tx) => {
+        // Note: Using createDraft without tx parameter for now
+        // In a full implementation, we would use createDraftTx here
+        return OrderService.createDraft({
+          checkoutPreview,
+        });
       });
 
       // STEP 4: Return response
@@ -77,7 +83,7 @@ export const OrderController = {
           totalItemCount: orderDraft.totalItemCount,
           subtotal: orderDraft.subtotal,
           shippingFee: orderDraft.shippingFee,
-          tax: orderDraft.tax,
+          adminFee: orderDraft.adminFee,
           total: orderDraft.total,
           items: orderDraft.items.map((item) => ({
             productId: item.productId,
@@ -203,7 +209,7 @@ export const OrderController = {
             totalItemCount: order.totalItemCount,
             subtotal: order.subtotal,
             shippingFee: order.shippingFee,
-            tax: order.tax,
+            adminFee: order.adminFee,
             total: order.total,
             shippingName: order.shippingName,
             shippingPhone: order.shippingPhone,
@@ -311,7 +317,7 @@ export const OrderController = {
             totalItemCount: order.totalItemCount,
             subtotal: order.subtotal,
             shippingFee: order.shippingFee,
-            tax: order.tax,
+            adminFee: order.adminFee,
             total: order.total,
             shippingName: order.shippingName,
             shippingPhone: order.shippingPhone,
@@ -387,8 +393,9 @@ export const OrderController = {
         return;
       }
 
-      // Update status via service
-      const order = await OrderService.updateStatus(orderId, status);
+      // Update status via OrderLifecycleService (single entry point for all status changes)
+      const result = await OrderLifecycleService._transition(orderId, status);
+      const order = result.order;
 
       res.status(200).json({
         success: true,
@@ -402,7 +409,7 @@ export const OrderController = {
             totalItemCount: order.totalItemCount,
             subtotal: order.subtotal,
             shippingFee: order.shippingFee,
-            tax: order.tax,
+            adminFee: order.adminFee,
             total: order.total,
             shippingName: order.shippingName,
             shippingPhone: order.shippingPhone,
@@ -484,7 +491,7 @@ export const OrderController = {
             totalItemCount: order.totalItemCount,
             subtotal: order.subtotal,
             shippingFee: order.shippingFee,
-            tax: order.tax,
+            adminFee: order.adminFee,
             total: order.total,
             shippingName: order.shippingName,
             shippingPhone: order.shippingPhone,

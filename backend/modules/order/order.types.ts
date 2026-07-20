@@ -21,6 +21,8 @@ export type OrderWithItems = Prisma.OrderGetPayload<{
 // ----- Input Types -----
 export interface CreateDraftInput {
   readonly checkoutPreview: import('../checkout/checkout.types.js').CheckoutPreview;
+  readonly shippingFee?: number;
+  readonly adminFee?: number;
 }
 
 /**
@@ -77,7 +79,7 @@ export interface OrderDraft {
   readonly subtotal: number;
   // 💰 FINANCIAL FIELDS - Fixes NaN issue
   readonly shippingFee: number;
-  readonly tax: number;
+  readonly adminFee: number;
   readonly total: number;
   // 📍 SHIPPING INFO
   readonly shippingName?: string;

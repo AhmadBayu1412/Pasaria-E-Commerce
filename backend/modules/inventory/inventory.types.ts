@@ -80,6 +80,15 @@ export interface ReleaseStockInput {
 }
 
 /**
+ * Release Stock Result — Minimal
+ */
+export interface ReleaseStockResult {
+  readonly productId: number;
+  readonly releasedQuantity: number;
+  readonly currentStock: number;
+}
+
+/**
  * Prisma Transaction Client type
  */
 export type TransactionClient = Prisma.TransactionClient;

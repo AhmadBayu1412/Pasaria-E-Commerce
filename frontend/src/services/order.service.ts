@@ -19,7 +19,7 @@ interface CreateOrderResponse {
     totalItemCount: number;
     subtotal: number;
     shippingFee: number;
-    tax: number;
+    adminFee: number;
     total: number;
     items: Order['items'];
     createdAt: string;
@@ -84,7 +84,7 @@ export const orderService = {
       items: data.items,
       subtotal: data.subtotal,
       shippingFee: data.shippingFee,
-      tax: data.tax,
+      adminFee: data.adminFee,
       total: data.total,
       totalQuantity: data.totalQuantity,
       totalItemCount: data.totalItemCount,

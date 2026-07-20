@@ -148,8 +148,8 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
           <span className="text-gray-900">{formatCurrency(order.shippingFee)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Pajak</span>
-          <span className="text-gray-900">{formatCurrency(order.tax)}</span>
+          <span className="text-gray-600">Biaya Admin</span>
+          <span className="text-gray-900">{formatCurrency(order.adminFee)}</span>
         </div>
         <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-100">
           <span className="text-gray-900">Total</span>

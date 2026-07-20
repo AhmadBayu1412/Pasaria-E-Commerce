@@ -29,6 +29,46 @@ import type {
   CompleteCheckoutResult,
 } from "./checkout.types.js"
 
+// ----- Shipping Options (mirrored from shipping.controller.ts) -----
+const SHIPPING_OPTIONS: Array<{ id: string; name: string; price: number }> = [
+  { id: "jne_reg", name: "JNE Regular", price: 15000 },
+  { id: "jne_yes", name: "JNE YES", price: 35000 },
+  { id: "pos_kilat", name: "Pos Kilat", price: 20000 },
+  { id: "tiki_reg", name: "TIKI Regular", price: 18000 },
+  { id: "grab_express", name: "GrabExpress", price: 25000 },
+]
+
+// ----- Payment Methods (mirrored from payment-methods.controller.ts) -----
+const PAYMENT_METHODS: Array<{ id: string; name: string; fee: number }> = [
+  { id: "bca_va", name: "BCA Virtual Account", fee: 4000 },
+  { id: "mandiri_va", name: "Mandiri Virtual Account", fee: 4000 },
+  { id: "bni_va", name: "BNI Virtual Account", fee: 4000 },
+  { id: "bri_va", name: "BRI Virtual Account", fee: 4000 },
+  { id: "gopay", name: "GoPay", fee: 2000 },
+  { id: "ovo", name: "OVO", fee: 2000 },
+  { id: "dana", name: "DANA", fee: 2000 },
+  { id: "credit_card", name: "Kartu Kredit", fee: 2.9 }, // percentage-based
+  { id: "indomaret", name: "Indomaret", fee: 2500 },
+  { id: "alfamart", name: "Alfamart", fee: 2500 },
+  { id: "qris", name: "QRIS", fee: 0 },
+]
+
+/**
+ * Get shipping option by ID
+ */
+function getShippingOption(shippingId?: string) {
+  if (!shippingId) return null
+  return SHIPPING_OPTIONS.find((s) => s.id === shippingId) || null
+}
+
+/**
+ * Get payment method by ID
+ */
+function getPaymentMethod(paymentId?: string) {
+  if (!paymentId) return null
+  return PAYMENT_METHODS.find((p) => p.id === paymentId) || null
+}
+
 export const CheckoutService = {
   /**
    * Initiate Checkout — Application Orchestrator
@@ -167,7 +207,7 @@ export const CheckoutService = {
    * @throws BusinessError CART_NOT_FOUND
    */
   async completeCheckout(input: CompleteCheckoutInput): Promise<CompleteCheckoutResult> {
-    const { userId } = input
+    const { userId, selectedShippingId, selectedPaymentId } = input
 
     // STEP 1: Get checkout preview (validates cart + inventory)
     const preview = await this.initiateCheckout({ userId })
@@ -176,15 +216,23 @@ export const CheckoutService = {
     CheckoutRules.assertPreviewValidForCompletion(preview)
     CheckoutRules.assertCartExists(preview.summary.cartId)
 
+    // STEP 3: Get shipping and payment fees
+    const shippingOption = getShippingOption(selectedShippingId)
+    const paymentMethod = getPaymentMethod(selectedPaymentId)
+    const shippingFee = shippingOption?.price ?? 0
+    const adminFee = paymentMethod?.fee ?? 0
+
     // Record transaction start time for audit
     const transactionStartTime = Date.now()
 
-    // STEP 3: Execute in transaction
+    // STEP 4: Execute in transaction
     // NOTE: This is the ONLY place where prisma.$transaction is called
     const result = await prisma.$transaction(async (tx) => {
-      // 3a. Create order draft (uses tx)
+      // 4a. Create order draft (uses tx) - pass shipping fee and admin fee
       const order = await OrderService.createDraftTx(tx, {
         checkoutPreview: preview,
+        shippingFee,
+        adminFee,
       })
 
       // 3b. Reserve inventory for each item (uses tx)
@@ -256,6 +304,9 @@ export const CheckoutService = {
       totalQuantity: result.order.totalQuantity,
       totalItemCount: result.order.totalItemCount,
       subtotal: result.order.subtotal,
+      shippingFee,
+      adminFee,
+      total: result.order.total,
       createdAt: result.order.createdAt,
     }
   },

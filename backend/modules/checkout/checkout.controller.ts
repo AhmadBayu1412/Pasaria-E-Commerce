@@ -83,8 +83,13 @@ export const CheckoutController = {
    *
    * Flow:
    * 1. Check authentication
-   * 2. Call CheckoutService.completeCheckout
-   * 3. Return order confirmation
+   * 2. Extract selected shipping and payment from request body
+   * 3. Call CheckoutService.completeCheckout
+   * 4. Return order confirmation
+   *
+   * Request body:
+   * - selectedShippingId: string (optional)
+   * - selectedPaymentId: string (optional)
    *
    * Response: 200 OK with CompleteCheckoutResult
    * Errors:
@@ -107,12 +112,17 @@ export const CheckoutController = {
         return
       }
 
-      // STEP 2: Execute complete checkout with transaction
+      // STEP 2: Extract selected shipping and payment from request body
+      const { selectedShippingId, selectedPaymentId } = req.body
+
+      // STEP 3: Execute complete checkout with transaction
       const result = await CheckoutService.completeCheckout({
         userId: user.id,
+        selectedShippingId,
+        selectedPaymentId,
       })
 
-      // STEP 3: Return response
+      // STEP 4: Return response with full financial breakdown
       res.status(200).json({
         success: true,
         data: {
@@ -121,6 +131,9 @@ export const CheckoutController = {
           totalQuantity: result.totalQuantity,
           totalItemCount: result.totalItemCount,
           subtotal: result.subtotal,
+          shippingFee: result.shippingFee,
+          adminFee: result.adminFee,
+          total: result.total,
           createdAt: result.createdAt.toISOString(),
         },
       })

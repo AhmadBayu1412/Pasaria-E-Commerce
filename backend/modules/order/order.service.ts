@@ -49,9 +49,9 @@ export const OrderService = {
     const totals = OrderMapper.calculateTotals(orderItems);
 
     // STEP 4: Calculate financial fields from checkout
-    const shippingFee = checkoutPreview.shipping?.fee ?? 0;
-    const tax = checkoutPreview.summary.tax ?? 0;
-    const total = totals.subtotal + shippingFee + tax;
+    const shippingFee = input.shippingFee ?? 0;
+    const adminFee = input.adminFee ?? 0;
+    const total = totals.subtotal + shippingFee + adminFee;
 
     // STEP 5: Get shipping info
     const shipping = checkoutPreview.shipping;
@@ -60,13 +60,13 @@ export const OrderService = {
     const order = await prisma.order.create({
       data: {
         userId: checkoutPreview.summary.userId,
-        status: 'PROCESSING',
+        status: 'DRAFT',
         totalQuantity: totals.totalQuantity,
         totalItemCount: totals.totalItemCount,
         subtotal: totals.subtotal,
         // 💰 FINANCIAL FIELDS
         shippingFee,
-        tax,
+        tax: adminFee,
         total,
         // 📍 SHIPPING INFO (from checkout)
         shippingName: shipping?.recipientName,
@@ -122,9 +122,9 @@ export const OrderService = {
     const totals = OrderMapper.calculateTotals(orderItems);
 
     // STEP 4: Calculate financial fields from checkout
-    const shippingFee = checkoutPreview.shipping?.fee ?? 0;
-    const tax = checkoutPreview.summary.tax ?? 0;
-    const total = totals.subtotal + shippingFee + tax;
+    const shippingFee = input.shippingFee ?? 0;
+    const adminFee = input.adminFee ?? 0;
+    const total = totals.subtotal + shippingFee + adminFee;
 
     // STEP 5: Get shipping info
     const shipping = checkoutPreview.shipping;
@@ -139,7 +139,7 @@ export const OrderService = {
         subtotal: totals.subtotal,
         // 💰 FINANCIAL FIELDS
         shippingFee,
-        tax,
+        tax: adminFee,
         total,
         // 📍 SHIPPING INFO (from checkout)
         shippingName: shipping?.recipientName,
@@ -235,9 +235,9 @@ export const OrderService = {
 
     // Validate state transition
     const currentStatus = order.status as OrderStatus;
-    const allowedTransitions = OrderStateTransitions[currentStatus]?.canTransitionTo ?? [];
+    const allowedTransitions = (OrderStateTransitions[currentStatus]?.canTransitionTo ?? []) as readonly OrderStatus[];
 
-    if (!allowedTransitions.includes(newStatus)) {
+    if (!allowedTransitions.includes(newStatus as OrderStatus)) {
       throw new Error(`INVALID_STATE_TRANSITION: Cannot transition from ${currentStatus} to ${newStatus}`);
     }
 
@@ -278,9 +278,9 @@ export const OrderService = {
 
     // Validate state transition
     const currentStatus = order.status as OrderStatus;
-    const allowedTransitions = OrderStateTransitions[currentStatus]?.canTransitionTo ?? [];
+    const allowedTransitions = (OrderStateTransitions[currentStatus]?.canTransitionTo ?? []) as readonly OrderStatus[];
 
-    if (!allowedTransitions.includes('CANCELLED')) {
+    if (!allowedTransitions.includes('CANCELLED' as OrderStatus)) {
       throw new Error(`INVALID_STATE_TRANSITION: Cannot cancel order in ${currentStatus} state`);
     }
 

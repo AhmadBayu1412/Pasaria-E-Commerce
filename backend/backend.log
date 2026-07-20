@@ -1,0 +1,11 @@
+
+> backend@1.0.0 dev
+> tsx watch app.ts
+
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+⚠️  SECURITY WARNINGS:
+  - SESSION_COOKIE_NAME menggunakan nilai default. Harap ubah di production!
+✅ Environment validation passed
+✅ DB CONNECTED
+✅ REDIS CONNECTED
+⚡️[server]: Server Pasaria berjalan di http://localhost:3001

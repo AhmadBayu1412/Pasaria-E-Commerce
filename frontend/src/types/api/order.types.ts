@@ -45,7 +45,7 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   shippingFee: number;
-  tax: number;
+  adminFee: number;
   total: number;
   totalQuantity: number;
   totalItemCount: number;

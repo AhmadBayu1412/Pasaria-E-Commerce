@@ -271,7 +271,10 @@ class CartService {
    * Complete checkout
    * Endpoint: POST /checkout/complete
    */
-  async completeCheckout(): Promise<{ success: boolean; orderId?: number; message?: string }> {
+  async completeCheckout(params?: {
+    selectedShippingId?: string;
+    selectedPaymentId?: string;
+  }): Promise<{ success: boolean; orderId?: number; message?: string }> {
     try {
       const response = await fetch(`${API_BASE_URL}/checkout/complete`, {
         method: 'POST',
@@ -279,6 +282,10 @@ class CartService {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          selectedShippingId: params?.selectedShippingId,
+          selectedPaymentId: params?.selectedPaymentId,
+        }),
       });
 
       // Handle 401 gracefully - user not logged in

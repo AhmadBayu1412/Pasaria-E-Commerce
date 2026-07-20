@@ -285,9 +285,9 @@ export function OrderDetail({ order, onReturnItem }: Readonly<OrderDetailProps>)
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-secondary-600">Pajak</span>
+                <span className="text-secondary-600">Biaya Admin</span>
                 <span className="font-medium text-secondary-900">
-                  {order.tax > 0 ? formatCurrency(order.tax) : '-'}
+                  {order.adminFee > 0 ? formatCurrency(order.adminFee) : '-'}
                 </span>
               </div>
               <div className="flex justify-between pt-3 border-t border-secondary-100">

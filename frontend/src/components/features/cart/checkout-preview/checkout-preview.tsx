@@ -36,16 +36,20 @@ export function CheckoutPreview() {
   const [isSyncingCart, setIsSyncingCart] = useState(false);
 
   // Sync local cart items to backend when entering checkout
+  // This ensures backend cart matches local cart before order creation
   useEffect(() => {
     const syncCartToBackend = async () => {
-      if (items.length === 0) return;
+      if (items.length === 0) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsSyncingCart(true);
       try {
-        // Clear backend cart first to avoid duplicates
+        // Clear backend cart first to ensure fresh sync
         await cartService.clearCart();
 
-        // Add each item to backend cart
+        // Add each item to backend cart with exact quantity
         for (const item of items) {
           const productId = parseInt(item.productId) || parseInt(item.id.replace('temp-', ''));
           if (productId) {
@@ -66,14 +70,16 @@ export function CheckoutPreview() {
     syncCartToBackend();
   }, [items.length]);
 
-  // Load checkout data
+  // Load checkout data (addresses, shipping, payment)
   useEffect(() => {
     const loadCheckoutData = async () => {
+      if (isSyncingCart) return;
+
       setIsLoading(true);
       setError(null);
 
       try {
-        // Load all data in parallel (cart synced in useEffect above)
+        // Load all data in parallel after cart sync completes
         const [addressRes, shippingRes, paymentRes] = await Promise.all([
           cartService.getAddresses(),
           cartService.getShippingOptions(),
@@ -94,7 +100,6 @@ export function CheckoutPreview() {
         }
 
         if (paymentRes.success && paymentRes.methods) {
-          // Transform backend response to frontend PaymentMethod type
           const transformedMethods: PaymentMethod[] = paymentRes.methods.map((m) => ({
             id: m.id,
             name: m.name,
@@ -119,10 +124,8 @@ export function CheckoutPreview() {
       }
     };
 
-    if (items.length > 0 && !isSyncingCart) {
-      loadCheckoutData();
-    }
-  }, [items.length, isSyncingCart]);
+    loadCheckoutData();
+  }, [isSyncingCart]);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
   const selectedShipping = shippingOptions.find((s) => s.id === selectedShippingId);
@@ -174,7 +177,10 @@ export function CheckoutPreview() {
     setError(null);
 
     try {
-      const response = await cartService.completeCheckout();
+      const response = await cartService.completeCheckout({
+        selectedShippingId: selectedShippingId,
+        selectedPaymentId: selectedPaymentId,
+      });
 
       if (response.success && response.orderId) {
         router.push(`/checkout/success?order_id=${response.orderId}`);

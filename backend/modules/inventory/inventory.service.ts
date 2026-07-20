@@ -21,6 +21,7 @@ import type {
   ReserveStockInput,
   ReserveStockResult,
   ReleaseStockInput,
+  ReleaseStockResult,
 } from "./inventory.types.js"
 
 export const InventoryService = {
@@ -213,18 +214,49 @@ export const InventoryService = {
   },
 
   /**
-   * Release Stock — INTERFACE ONLY in Step 7
-   * Implementation deferred to Step 8
+   * Release Stock — Inside Transaction
+   *
+   * Returns reserved stock back to available inventory.
+   * Called when order is cancelled or expired.
    *
    * @param tx - Prisma.TransactionClient (REQUIRED)
-   * @param input - ReleaseStockInput
-   * @throws Error "Not implemented in Step 7"
+   * @param input - ReleaseStockInput with productId + quantity
+   * @returns ReleaseStockResult
    */
   async releaseStockTx(
-    _tx: Prisma.TransactionClient,
-    _input: ReleaseStockInput
-  ): Promise<void> {
-    // TODO: Step 8 implementation
-    throw new Error("Not implemented in Step 7 - deferred to Step 8")
+    tx: Prisma.TransactionClient,
+    input: ReleaseStockInput
+  ): Promise<ReleaseStockResult> {
+    const { productId, quantity } = input;
+
+    // 1. Get product to verify it exists
+    const product = await tx.product.findUnique({
+      where: { id: productId },
+      select: { id: true, availableStock: true },
+    });
+
+    if (!product) {
+      throw new BusinessError("Product not found", 404, "PRODUCT_NOT_FOUND");
+    }
+
+    // 2. Increment availableStock (return reserved stock)
+    const updated = await tx.product.update({
+      where: { id: productId },
+      data: {
+        availableStock: {
+          increment: quantity,
+        },
+      },
+      select: {
+        id: true,
+        availableStock: true,
+      },
+    });
+
+    return {
+      productId: updated.id,
+      releasedQuantity: quantity,
+      currentStock: updated.availableStock,
+    };
   },
 } as const

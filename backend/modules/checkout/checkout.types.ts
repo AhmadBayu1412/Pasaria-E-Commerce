@@ -18,10 +18,12 @@ export interface InitiateCheckoutInput {
 
 /**
  * Input for complete checkout
- * Minimal - uses existing CheckoutPreview from Step 6
+ * Now includes shipping and payment selection
  */
 export interface CompleteCheckoutInput {
   readonly userId: number;
+  readonly selectedShippingId?: string;
+  readonly selectedPaymentId?: string;
 }
 
 // ----- Shipping Info -----
@@ -80,6 +82,9 @@ export interface CompleteCheckoutResult {
   readonly totalQuantity: number;
   readonly totalItemCount: number;
   readonly subtotal: number;
+  readonly shippingFee: number;
+  readonly adminFee: number;
+  readonly total: number;
   readonly createdAt: Date;
 }
 

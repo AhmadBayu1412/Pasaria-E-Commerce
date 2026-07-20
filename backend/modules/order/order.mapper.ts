@@ -34,6 +34,9 @@ interface ExtendedOrderFields {
   shippingPostalCode: string | null;
 }
 
+// Map Prisma's 'tax' field to frontend's 'adminFee' concept
+// This maintains backward compatibility with Prisma schema while providing clear naming for frontend
+
 export const OrderMapper = {
   /**
    * Transform CheckoutItemPreview → OrderItemData
@@ -88,7 +91,7 @@ export const OrderMapper = {
       totalItemCount: order.totalItemCount,
       subtotal: Number(order.subtotal),
       shippingFee: Number(extendedOrder.shippingFee),
-      tax: Number(extendedOrder.tax),
+      adminFee: Number(extendedOrder.tax), // tax field in DB = adminFee in frontend
       total: Number(extendedOrder.total),
       shippingName: extendedOrder.shippingName ?? undefined,
       shippingPhone: extendedOrder.shippingPhone ?? undefined,
