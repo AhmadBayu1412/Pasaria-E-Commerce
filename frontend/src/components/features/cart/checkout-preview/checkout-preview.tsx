@@ -12,12 +12,26 @@ import { MapPin, Truck, CreditCard, ArrowLeft, ArrowRight, Check, Loader2, Alert
 import { cn } from '@/lib/cn';
 import { useCartStore, useCartSubtotal } from '@/store/cart.store';
 import { cartService } from '@/services/cart.service';
-import type { Address, ShippingOption, PaymentMethod } from '@/store/cart.types';
+import type { Address, ShippingOption, PaymentMethod, CartItem } from '@/store/cart.types';
+
+// Backend checkout item format (from POST /checkout response)
+interface CheckoutItemPreview {
+  productId: number;
+  productName: string;
+  productImage?: string | null;
+  unitPrice: number;
+  quantity: number;
+  availableStock: number;
+  subtotal: number;
+  status: 'VALID' | 'INVALID';
+  reason?: 'PRODUCT_NOT_FOUND' | 'OUT_OF_STOCK';
+}
 
 type CheckoutStep = 'address' | 'shipping' | 'payment' | 'confirm';
 
 export function CheckoutPreview() {
   const router = useRouter();
+  const setItems = useCartStore((state) => state._setItems);
   const items = useCartStore((state) => state.items);
   const subtotal = useCartSubtotal();
 
@@ -34,41 +48,129 @@ export function CheckoutPreview() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSyncingCart, setIsSyncingCart] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  // Sync local cart items to backend when entering checkout
-  // This ensures backend cart matches local cart before order creation
+  // Sync local cart items to backend ONCE on mount
+  // Uses empty dependency array [] to ensure single execution
   useEffect(() => {
+    let isCancelled = false;
+
     const syncCartToBackend = async () => {
-      if (items.length === 0) {
-        setIsLoading(false);
+      // IMPORTANT: Read from store at effect execution time, not render time.
+      // useCartStore.getState() bypasses the stale-closure problem when navigating
+      // directly to /checkout with items in localStorage (itemsRef.current would be []
+      // because Zustand hasn't hydrated yet on the first render).
+      const currentItems = useCartStore.getState().items;
+
+      if (currentItems.length === 0) {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
         return;
       }
 
-      setIsSyncingCart(true);
-      try {
-        // Clear backend cart first to ensure fresh sync
-        await cartService.clearCart();
+      if (!isCancelled) {
+        setIsSyncingCart(true);
+        setSyncError(null);
+      }
 
-        // Add each item to backend cart with exact quantity
-        for (const item of items) {
-          const productId = parseInt(item.productId) || parseInt(item.id.replace('temp-', ''));
-          if (productId) {
-            await cartService.addItem({
-              productId,
-              quantity: item.quantity,
-            });
+      try {
+        // Check if backend has items first
+        const cartResponse = await cartService.getCart();
+        const backendHasItems = cartResponse.success && cartResponse.cart?.items && cartResponse.cart.items.length > 0;
+
+        if (backendHasItems) {
+          // Backend cart has items — use initiateCheckout for AUTHORITATIVE items with correct prices
+          if (!isCancelled) {
+            const checkoutRes = await cartService.initiateCheckout();
+            if (checkoutRes.success && checkoutRes.preview?.items) {
+              const backendItems = checkoutRes.preview.items as unknown as CheckoutItemPreview[];
+              // Build a map of local items keyed by productId for merging local-only fields
+              const localItemsMap = new Map(
+                currentItems.map((item) => [String(item.productId), item])
+              );
+              const mergedItems: CartItem[] = backendItems.map((backendItem) => {
+                const localItem = localItemsMap.get(String(backendItem.productId));
+                return {
+                  id: localItem?.id || String(backendItem.productId),
+                  productId: String(backendItem.productId),
+                  quantity: backendItem.quantity,
+                  name: backendItem.productName || localItem?.name || '',
+                  slug: localItem?.slug || '',
+                  price: backendItem.unitPrice || 0,
+                  currentPrice: backendItem.unitPrice || 0,
+                  image: backendItem.productImage || localItem?.image || '',
+                  stock: backendItem.availableStock || localItem?.stock || 0,
+                  isAvailable: backendItem.status !== 'INVALID',
+                  variantId: localItem?.variantId,
+                };
+              });
+              setItems(mergedItems);
+              console.log(`[Checkout] Loaded ${backendItems.length} authoritative items with correct prices from backend`);
+            }
           }
+        } else if (currentItems.length > 0) {
+          // Backend cart is empty — push local items to backend first
+          if (!isCancelled) {
+            for (const item of currentItems) {
+              const productId = parseInt(item.productId) || parseInt(item.id.replace('temp-', ''));
+              if (productId && item.quantity > 0) {
+                await cartService.addItem({ productId, quantity: item.quantity }).catch(() => {});
+              }
+            }
+            // Now get authoritative items with correct prices from initiateCheckout
+            const checkoutRes = await cartService.initiateCheckout();
+            if (checkoutRes.success && checkoutRes.preview?.items) {
+              const backendItems = checkoutRes.preview.items as unknown as CheckoutItemPreview[];
+              const localItemsMap = new Map(
+                currentItems.map((item) => [String(item.productId), item])
+              );
+              const mergedItems: CartItem[] = backendItems.map((backendItem) => {
+                const localItem = localItemsMap.get(String(backendItem.productId));
+                return {
+                  id: localItem?.id || String(backendItem.productId),
+                  productId: String(backendItem.productId),
+                  quantity: backendItem.quantity,
+                  name: backendItem.productName || localItem?.name || '',
+                  slug: localItem?.slug || '',
+                  price: backendItem.unitPrice || 0,
+                  currentPrice: backendItem.unitPrice || 0,
+                  image: backendItem.productImage || localItem?.image || '',
+                  stock: backendItem.availableStock || localItem?.stock || 0,
+                  isAvailable: backendItem.status !== 'INVALID',
+                  variantId: localItem?.variantId,
+                };
+              });
+              setItems(mergedItems);
+              console.log(`[Checkout] Pushed ${currentItems.length} local items to backend, loaded authoritative items with correct prices`);
+            }
+          }
+        } else {
+          // Both empty
+          if (!isCancelled) {
+            setIsLoading(false);
+          }
+          return;
         }
       } catch (err) {
-        console.warn('Failed to sync cart to backend:', err);
-        // Continue anyway - checkout might still work
+        console.error('Failed to load cart from backend:', err);
+        if (!isCancelled) {
+          setSyncError('Gagal memuat keranjang dari server. Checkout mungkin tidak berjalan dengan benar.');
+        }
       } finally {
-        setIsSyncingCart(false);
+        if (!isCancelled) {
+          setIsSyncingCart(false);
+        }
       }
     };
 
     syncCartToBackend();
-  }, [items.length]);
+
+    // Cleanup: prevent state updates if component unmounts
+    return () => {
+      isCancelled = true;
+    };
+  }, []); // Empty deps = run ONCE on mount only
 
   // Load checkout data (addresses, shipping, payment)
   useEffect(() => {
@@ -246,6 +348,17 @@ export function CheckoutPreview() {
           </button>
           <h1 className="text-3xl font-bold text-secondary-900">Checkout</h1>
         </div>
+
+        {/* Sync Error Banner */}
+        {syncError && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-amber-800 font-medium">Peringatan Sinkronisasi</p>
+              <p className="text-sm text-amber-700 mt-1">{syncError}</p>
+            </div>
+          </div>
+        )}
 
         {/* Progress Steps */}
         <div className="mb-8">

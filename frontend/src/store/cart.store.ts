@@ -74,7 +74,7 @@ export const useCartStore = create<CartState & CartActions>()(
       selectedShipping: null,
 
       // Add item to cart
-      addItem: (item: CartItem) => {
+      addItem: async (item: CartItem) => {
         const items = get().items;
         const existingIndex = items.findIndex(
           (i) => i.productId === item.productId && i.variantId === item.variantId
@@ -83,13 +83,30 @@ export const useCartStore = create<CartState & CartActions>()(
         if (existingIndex >= 0) {
           // Update quantity if item exists
           const updatedItems = [...items];
+          const newQuantity = updatedItems[existingIndex].quantity + item.quantity;
           updatedItems[existingIndex] = {
             ...updatedItems[existingIndex],
-            quantity: updatedItems[existingIndex].quantity + item.quantity,
+            quantity: newQuantity,
           };
           set({ items: updatedItems });
+
+          // Sync updated quantity to backend (async, fire-and-forget)
+          const productId = parseInt(item.productId) || parseInt(item.id.replace('temp-', ''));
+          if (productId) {
+            fetch(`${API_BASE_URL}/cart/items/${productId}`, {
+              method: 'PATCH',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ quantity: newQuantity }),
+            }).catch((e: unknown) => {
+              console.warn('[Cart] Failed to sync quantity to backend:', e);
+            });
+          }
         } else {
-          // Add new item
+          // Add new item — local state only.
+          // Backend sync is handled exclusively by the checkout-preview sync effect.
+          // This prevents the race condition where two POSTs to /cart/items
+          // (one from sync effect, one from here) each increment the quantity.
           set({ items: [...items, item] });
         }
       },
@@ -105,6 +122,22 @@ export const useCartStore = create<CartState & CartActions>()(
           item.id === itemId ? { ...item, quantity } : item
         );
         set({ items });
+
+        // Sync to backend (async, fire-and-forget)
+        const item = get().items.find((i) => i.id === itemId);
+        if (item) {
+          const productId = parseInt(item.productId) || parseInt(item.id.replace('temp-', ''));
+          if (productId) {
+            fetch(`${API_BASE_URL}/cart/items/${productId}`, {
+              method: 'PATCH',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ quantity }),
+            }).catch((e: unknown) => {
+              console.warn('[Cart] Failed to sync quantity to backend:', e);
+            });
+          }
+        }
       },
 
       // Remove item
