@@ -33,16 +33,19 @@ export function errorMiddleware(
         })
     }
 
-    // Generic error
+    // Generic error - Log for Vercel diagnostic
+    console.error("[SERVER ERROR]", err)
+
     const statusCode = err.statusCode || err.status || 500
 
     return res
         .status(statusCode)
         .json({
+            success: false,
             error: {
-                code: "INTERNAL_ERROR",
+                code: "INTERNAL_SERVER_ERROR",
                 message: process.env.NODE_ENV === "production"
-                    ? "Terjadi kesalahan internal"
+                    ? "Terjadi kesalahan internal pada server"
                     : err.message || "Internal Error"
             }
         })
