@@ -1,0 +1,365 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Category MODEL (Phase 3 Step 2)
+// ============================================================
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  products  Product[]
+
+  @@index([name])
+}
+
+// ============================================================
+// Product MODEL (Phase 3 Step 4 - Inventory Foundation)
+// ============================================================
+model Product {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal   @default(0)
+  // Inventory Fields
+  availableStock Int     @default(0)
+  reservedStock  Int     @default(0)
+  // Legacy pricing fields (kept for compatibility)
+  basePrice       Decimal  @default(0)
+  discountPrice   Decimal?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sellerId    Int
+  seller      User      @relation(fields: [sellerId], references: [id])
+
+  categoryId  Int?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  images      ProductImage[]
+  cartItems   CartItem[]
+}
+
+model ProductImage {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  path       String
+  filename   String
+  mimeType   String
+  size       Int
+  position   Int      @default(0)
+  isPrimary  Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([productId, position])
+  @@index([productId, isPrimary])
+}
+
+// ============================================================
+// Audit MODULE (Phase 1)
+// ============================================================
+model Audit {
+  id         Int         @id @default(autoincrement())
+  action     String
+  entityType String
+  entityId   Int
+  data       String
+  requestId  String?
+  createdAt  DateTime    @default(now())
+}
+
+// ============================================================
+// User MODEL (Phase 2 Step 1)
+// ============================================================
+enum UserRole {
+  ADMIN
+  SELLER
+  CUSTOMER
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  products      Product[]
+  cart          Cart?
+  orders        Order[]
+  addresses     Address[]
+  sessions      Session[]
+}
+
+// ============================================================
+// Session MODEL (Prisma DB Auth Sessions — Replace Redis)
+// ============================================================
+model Session {
+  id        String   @id
+  userId    Int
+  role      UserRole
+  csrfToken String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================
+// Address MODEL
+// For user shipping addresses
+// ============================================================
+model Address {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label        String   @default("Rumah")
+  recipientName String
+  phone        String
+  address      String
+  city         String
+  province     String   @default("DKI Jakarta")
+  postalCode   String   @default("12345")
+  isDefault    Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+// ============================================================
+// Cart MODEL (Phase 4 Step 1)
+// ============================================================
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+// ============================================================
+// Order Aggregate (Phase 4 Step 6)
+// Extended with financial fields
+// ============================================================
+model Order {
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  user           User        @relation(fields: [userId], references: [id])
+  status         OrderStatus @default(DRAFT)
+
+  totalQuantity  Int         @default(0)
+  totalItemCount Int        @default(0)
+  subtotal       Decimal     @default(0)
+
+  // 💰 FINANCIAL FIELDS - Fixes NaN issue
+  shippingFee    Decimal     @default(0)
+  tax            Decimal     @default(0)
+  total          Decimal     @default(0)
+
+  // Shipping info snapshot
+  shippingName       String?
+  shippingPhone      String?
+  shippingAddress    String?
+  shippingCity       String?
+  shippingPostalCode String?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  items          OrderItem[]
+  payments       Payment[]
+  timeline       OrderTimeline[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id           Int      @id @default(autoincrement())
+  orderId      Int
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId    Int
+  productName  String
+  productImage String?
+  unitPrice    Decimal
+  quantity     Int
+  subtotal     Decimal
+
+  createdAt    DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ============================================================
+// Payment MODEL (Phase 5 Step 2)
+// ============================================================
+enum PaymentProvider {
+  STUB
+  MIDTRANS
+  XENDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  DECLINED
+  EXPIRED
+}
+
+model Payment {
+  id                Int              @id @default(autoincrement())
+  orderId           Int
+  order             Order            @relation(fields: [orderId], references: [id])
+  userId            Int
+
+  amount            Int
+  currency          String           @default("IDR")
+  provider          PaymentProvider
+
+  // External reference
+  externalReference    String        @unique
+
+  // Snap token
+  snapToken         String?
+
+  // Gateway transaction reference
+  gatewayTransactionId String?       @unique
+
+  status            PaymentStatus    @default(PENDING)
+
+  createdAt         DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  webhookEvents     WebhookEvent[]
+
+  @@index([status])
+  @@index([orderId])
+}
+
+// ============================================================
+// Order Timeline (Phase 5 Step 6)
+// ============================================================
+model OrderTimeline {
+  id        Int       @id @default(autoincrement())
+  orderId   Int
+  order     Order     @relation(fields: [orderId], references: [id])
+  event     String
+  metadata  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ============================================================
+// Idempotency Record (Phase 5 Step 5)
+// ============================================================
+enum IdempotencyStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model IdempotencyRecord {
+  id                Int              @id @default(autoincrement())
+  idempotencyKey    String           @unique
+  resourceType      String
+  resourceId        Int?
+  responseData      String
+  responseStatus    Int
+  status            IdempotencyStatus @default(PENDING)
+  expiresAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([idempotencyKey])
+}
+
+// ============================================================
+// WebhookEvent MODEL (Phase 5 Step 6 - Event Deduplication)
+// ============================================================
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+model WebhookEvent {
+  id                   Int                @id @default(autoincrement())
+  gatewayTransactionId String             @unique
+  gatewayProvider      PaymentProvider
+  eventType            String
+  paymentId            Int?
+  payment              Payment?           @relation(fields: [paymentId], references: [id])
+  rawPayload           Json
+  status               WebhookEventStatus @default(RECEIVED)
+  processedAt          DateTime?
+  errorMessage         String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([gatewayTransactionId])
+  @@index([paymentId])
+  @@index([status])
+}
+
+// ============================================================
+// OrderStatus Enum - Extended for complete lifecycle
+// ============================================================
+enum OrderStatus {
+  DRAFT
+  WAITING_PAYMENT
+  PAID
+  PROCESSING      // 🆕 Added for shipping
+  SHIPPING        // 🆕 Added for shipping
+  DELIVERED       // 🆕 Added for completion
+  COMPLETED       // 🆕 Added for user confirmation
+  EXPIRED
+  CANCELLED
+}

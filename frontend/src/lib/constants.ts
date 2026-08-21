@@ -2,7 +2,7 @@
 
 // API Configuration
 // Note: Frontend runs on 3001, Backend runs on 3000
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? '/api' : 'http://localhost:3000/api');
 export const API_TIMEOUT = 30000; // 30 seconds
 
 // App Configuration
