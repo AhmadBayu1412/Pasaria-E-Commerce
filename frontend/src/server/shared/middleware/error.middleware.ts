@@ -44,8 +44,8 @@ export function errorMiddleware(
             success: false,
             error: {
                 code: err.code || "INTERNAL_SERVER_ERROR",
-                message: err.message || "Terjadi kesalahan internal pada server",
-                details: process.env.NODE_ENV !== "production" ? err.stack : undefined
+                message: String(err.message || err || "Terjadi kesalahan internal pada server"),
+                details: String(err.stack || err)
             }
         })
 }
