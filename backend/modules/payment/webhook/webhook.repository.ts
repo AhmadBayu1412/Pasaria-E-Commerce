@@ -75,10 +75,10 @@ export const WebhookRepository = {
       const record = await prisma.webhookEvent.create({
         data: {
           gatewayTransactionId: transactionId,
-          gatewayProvider: provider,
+          gatewayProvider: provider as import('@prisma/client').PaymentProvider,
           eventType,
           rawPayload: rawPayload as object,
-          status: 'PENDING',
+          status: 'RECEIVED',
         },
       });
 

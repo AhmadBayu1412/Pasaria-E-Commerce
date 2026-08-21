@@ -12,14 +12,14 @@ import { authService } from '@/services/auth.service';
 import { Button } from '@/components/ui/button';
 
 interface LogoutButtonProps {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  size?: 'xs' | 'sm' | 'default' | 'lg';
   children?: React.ReactNode;
 }
 
 export function LogoutButton({
   variant = 'ghost',
-  size = 'md',
+  size = 'default',
   children = 'Logout',
 }: LogoutButtonProps) {
   const { reset } = useAuthStore();

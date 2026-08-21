@@ -63,7 +63,7 @@ export const IdempotencyRepository = {
           idempotencyKey: key,
           resourceType,
           status: 'PENDING',
-          responseData: {},
+          responseData: '{}',
           responseStatus: 0,
         },
       });

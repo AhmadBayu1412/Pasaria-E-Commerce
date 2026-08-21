@@ -23,7 +23,7 @@ export function ProductCardActions({
       {isOutOfStock ? (
         <Button
           variant="outline"
-          size="sm"
+          size="default"
           className="flex-1"
           disabled
         >
@@ -31,8 +31,8 @@ export function ProductCardActions({
         </Button>
       ) : (
         <Button
-          variant="primary"
-          size="sm"
+          variant="default"
+          size="default"
           className="flex-1"
           aria-label={`Tambah ${productName} ke keranjang`}
         >

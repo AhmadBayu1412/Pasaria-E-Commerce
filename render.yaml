@@ -1,0 +1,110 @@
+# ============================================================
+# RENDER.YAML — Infrastructure as Code
+# Deploy ke Render dengan: render.com/deploy
+# Atau connect repo dan Render akan otomatis detect file ini
+#
+# Services:
+#   1. pasaria-api     — Backend Express API
+#   2. pasaria-worker  — BullMQ background worker
+#   3. pasaria-frontend — Next.js frontend
+#   4. pasaria-db      — PostgreSQL database
+#   5. pasaria-redis   — Redis cache
+# ============================================================
+
+services:
+  # ============================================================
+  # BACKEND API
+  # ============================================================
+  - type: web
+    name: pasaria-api
+    runtime: node
+    region: singapore  # Terdekat ke Indonesia
+    plan: starter      # Ganti ke 'standard' untuk production serius
+    buildCommand: cd backend && npm install && npm run build:prod
+    startCommand: cd backend && npx prisma migrate deploy && node dist/app.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: TRUST_PROXY_COUNT
+        value: 1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pasaria-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: pasaria-redis
+          type: redis
+          property: connectionString
+      # Isi manual di Render dashboard:
+      - key: SESSION_SECRET
+        sync: false  # Harus diisi manual — jangan commit nilai aslinya!
+      - key: SESSION_COOKIE_NAME
+        value: __pasaria_sid
+      - key: SESSION_TTL
+        value: 86400
+      - key: CORS_ORIGIN
+        value: https://pasaria-frontend.onrender.com  # Update setelah frontend deployed
+      - key: SUPABASE_URL
+        sync: false  # Isi di Render dashboard
+      - key: SUPABASE_SERVICE_KEY
+        sync: false  # Isi di Render dashboard
+      - key: SUPABASE_STORAGE_BUCKET
+        value: product-images
+
+  # ============================================================
+  # BULLMQ WORKER
+  # ============================================================
+  - type: worker
+    name: pasaria-worker
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: cd backend && npm install && npm run build:prod
+    startCommand: cd backend && node dist/worker.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pasaria-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: pasaria-redis
+          type: redis
+          property: connectionString
+
+  # ============================================================
+  # FRONTEND (Next.js)
+  # ============================================================
+  - type: web
+    name: pasaria-frontend
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && node .next/standalone/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://pasaria-api.onrender.com  # Update dengan URL API Anda
+
+databases:
+  - name: pasaria-db
+    plan: starter
+    region: singapore
+    databaseName: pasaria
+    user: pasaria
+
+# ============================================================
+# REDIS (terpisah sebagai service)
+# ============================================================
+# Catatan: Render Redis didefinisikan di services dengan type: redis
+# Tambahkan secara manual di Render dashboard jika tidak auto-detected

@@ -255,15 +255,15 @@ export class PaymentConfirmationService {
         data: {
           orderId: payment!.orderId,
           event: 'PAYMENT_CONFIRMED',
-          metadata: {
+          metadata: JSON.stringify({
             paymentId: payment!.id,
             gatewayTransactionId: input.gatewayTransactionId,
             eventType: input.eventType,
             previousStatus: payment!.status,
             newStatus: 'SUCCESS',
             confirmedAt: new Date().toISOString(),
-            source: input.source, // Phase 5 Step 8: Track source
-          },
+            source: input.source,
+          }),
         },
       });
 
@@ -329,13 +329,13 @@ export class PaymentConfirmationService {
         data: {
           orderId: payment.orderId,
           event: 'PAYMENT_FAILED',
-          metadata: {
+          metadata: JSON.stringify({
             paymentId: payment.id,
             gatewayTransactionId,
             reason,
             failedAt: new Date().toISOString(),
-            source, // Phase 5 Step 8: Track source
-          },
+            source,
+          }),
         },
       });
     });

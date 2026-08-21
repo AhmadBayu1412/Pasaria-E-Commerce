@@ -47,6 +47,7 @@ export function toDTO(product: Product): ProductResponseDTO {
         // -------------------------------------------
         sellerId: product.sellerId,
         categoryId: product.categoryId,  // Phase 3 Step 2 - Category relation
+        images: [],  // populated by image.service when needed
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString()
     }
@@ -69,6 +70,7 @@ export function toDTODirect(raw: PrismaProduct): ProductResponseDTO {
         // -------------------------------------------
         sellerId: raw.sellerId,
         categoryId: raw.categoryId,  // Phase 3 Step 2 - Category relation
+        images: [],  // populated by image.service when needed
         createdAt: raw.createdAt.toISOString(),
         updatedAt: raw.updatedAt.toISOString()
     }

@@ -20,7 +20,7 @@ export const SESSION_CONFIG = {
     cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
+        sameSite: (process.env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
         path: "/",
         domain: process.env.SESSION_COOKIE_DOMAIN || undefined
     }

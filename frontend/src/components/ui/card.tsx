@@ -10,9 +10,9 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', ...props }, ref) => {
     const variants = {
-      default: 'bg-white shadow-sm',
-      elevated: 'bg-white shadow-md',
-      outlined: 'bg-white border border-slate-200',
+      default: 'bg-card shadow-sm',
+      elevated: 'bg-card shadow-md',
+      outlined: 'bg-card border border-border',
     };
     
     return (
@@ -29,7 +29,7 @@ Card.displayName = 'Card';
 
 const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('px-4 py-3 border-b border-slate-100', className)} {...props} />
+    <div ref={ref} className={cn('px-4 py-3 border-b border-border', className)} {...props} />
   )
 );
 
@@ -45,7 +45,7 @@ CardContent.displayName = 'CardContent';
 
 const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('px-4 py-3 border-t border-slate-100', className)} {...props} />
+    <div ref={ref} className={cn('px-4 py-3 border-t border-border', className)} {...props} />
   )
 );
 

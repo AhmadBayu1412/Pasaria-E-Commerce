@@ -9,7 +9,7 @@ import { prisma } from "./infra/db/prisma"
 import { redis } from "./infra/cache/redis"
 import { checkDatabaseHealth } from './infra/db/health'
 import { checkRedisHealth } from './infra/cache/health'
-import { getQueueStatus } from './infra/queue/bullmq.js'
+import { getQueueStatus, closeCheckoutWorker, closeCheckoutQueue } from './infra/queue/bullmq.js'
 
 // PHASE 1
 import { errorMiddleware } from './shared/middleware/error.middleware'
@@ -155,19 +155,30 @@ app.use("/shipping", shippingRoutes)
 // Payment Methods Routes
 app.use("/payments", paymentMethodsRoutes)
 
+// ============================================================
+// GRACEFUL SHUTDOWN
+// ============================================================
+async function shutdown(signal: string) {
+    console.log(`\n${signal} received. Shutting down gracefully...`)
+    try {
+        await closeCheckoutWorker()
+        await closeCheckoutQueue()
+        await prisma.$disconnect()
+        await redis.quit()
+        console.log('✅ Shutdown complete')
+        process.exit(0)
+    } catch (err) {
+        console.error('Shutdown error:', err)
+        process.exit(1)
+    }
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"))
+process.on("SIGTERM", () => shutdown("SIGTERM"))
+
 // ============ ERROR HANDLING ============
 app.use(notFound)
 app.use(errorMiddleware)
-
-// ============ GRACEFUL SHUTDOWN ============
-process.on("SIGINT",
-    async () => {
-        console.log("\nShutting down...")
-        await prisma.$disconnect()
-        await redis.quit()
-        process.exit(0)
-    }
-)
 
 // ============ BOOTSTRAP ============
 async function bootstrap() {
@@ -181,8 +192,8 @@ async function bootstrap() {
         await redis.connect()
         console.log("✅ REDIS CONNECTED")
 
-        app.listen(port, () => {
-            console.log(`⚡️[server]: Server Pasaria berjalan di http://localhost:${port}`)
+        app.listen(port, '0.0.0.0', () => {
+            console.log(`⚡️[server]: Server Pasaria berjalan di http://0.0.0.0:${port}`)
         })
 
     } catch (err) {

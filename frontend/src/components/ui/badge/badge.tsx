@@ -14,12 +14,12 @@ export function Badge({
   className,
 }: BadgeProps) {
   const variantStyles = {
-    default: 'bg-secondary-100 text-secondary-700',
-    primary: 'bg-primary-100 text-primary-700',
-    success: 'bg-green-100 text-green-700',
-    warning: 'bg-amber-100 text-amber-700',
-    error: 'bg-red-100 text-red-700',
-    info: 'bg-blue-100 text-blue-700',
+    default: 'bg-muted text-muted-foreground',
+    primary: 'bg-primary/10 text-primary',
+    success: 'bg-[--success-light] text-[--success]',
+    warning: 'bg-[--warning-light] text-[--warning]',
+    error: 'bg-[--error-light] text-[--error]',
+    info: 'bg-[--info-light] text-[--info]',
   };
 
   const sizeStyles = {
@@ -29,12 +29,12 @@ export function Badge({
   };
 
   const dotColors = {
-    default: 'bg-secondary-500',
-    primary: 'bg-primary-500',
-    success: 'bg-green-500',
-    warning: 'bg-amber-500',
-    error: 'bg-red-500',
-    info: 'bg-blue-500',
+    default: 'bg-muted-foreground',
+    primary: 'bg-primary',
+    success: 'bg-[--success]',
+    warning: 'bg-[--warning]',
+    error: 'bg-[--error]',
+    info: 'bg-[--info]',
   };
 
   return (

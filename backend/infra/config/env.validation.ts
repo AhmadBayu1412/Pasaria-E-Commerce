@@ -12,6 +12,11 @@ const REQUIRED_ENV_VARS = [
     "DATABASE_URL"
 ] as const
 
+const REQUIRED_IN_PRODUCTION = [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_KEY",
+] as const
+
 interface ValidationResult {
     valid: boolean
     errors: string[]
@@ -32,6 +37,22 @@ export function validateEnvironment(): ValidationResult {
 
         if (!value || value.trim() === "") {
             errors.push(`${varName} is required but not set`)
+        }
+    }
+
+    // ========== CHECK PRODUCTION-ONLY REQUIRED VARS ==========
+    if (isProduction) {
+        for (const varName of REQUIRED_IN_PRODUCTION) {
+            const value = process.env[varName]
+            if (!value || value.trim() === "") {
+                errors.push(`${varName} is required in production but not set`)
+            }
+        }
+    } else {
+        for (const varName of REQUIRED_IN_PRODUCTION) {
+            if (!process.env[varName]) {
+                warnings.push(`${varName} not set — file uploads will not work`)
+            }
         }
     }
 

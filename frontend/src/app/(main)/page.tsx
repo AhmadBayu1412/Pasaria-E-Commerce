@@ -31,7 +31,7 @@ export default function HomePage() {
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
             Siap Memulai Belanja?
           </h2>
-          <p className="text-primary-100 mb-8 max-w-xl mx-auto">
+          <p className="text-primary-foreground mb-8 max-w-xl mx-auto">
             Bergabunglah dengan ribuan pengguna yang sudah menemukan produk
             favorit mereka di Pasaria.
           </p>

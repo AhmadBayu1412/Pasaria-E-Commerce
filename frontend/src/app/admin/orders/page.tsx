@@ -16,7 +16,7 @@ const orders: Order[] = [
     items: [],
     subtotal: 250000,
     shippingFee: 15000,
-    tax: 25000,
+    adminFee: 2500,
     total: 290000,
     totalQuantity: 2,
     totalItemCount: 1,
@@ -30,7 +30,7 @@ const orders: Order[] = [
     items: [],
     subtotal: 500000,
     shippingFee: 20000,
-    tax: 50000,
+    adminFee: 5000,
     total: 570000,
     totalQuantity: 3,
     totalItemCount: 2,
@@ -44,7 +44,7 @@ const orders: Order[] = [
     items: [],
     subtotal: 125000,
     shippingFee: 10000,
-    tax: 12500,
+    adminFee: 1250,
     total: 147500,
     totalQuantity: 1,
     totalItemCount: 1,
@@ -106,10 +106,10 @@ export default function AdminOrdersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-secondary-900">Pesanan</h1>
+        <h1 className="text-2xl font-bold text-foreground">Pesanan</h1>
       </div>
 
-      <div className="bg-white rounded-lg border border-secondary-200">
+      <div className="bg-card rounded-lg border border-border">
         <DataTable
           data={orders}
           columns={columns}

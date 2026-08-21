@@ -31,7 +31,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-secondary-700"
+            className="block text-sm font-medium text-foreground"
           >
             {label}
           </label>
@@ -39,7 +39,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative">
           {leftElement && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
               {leftElement}
             </div>
           )}
@@ -54,20 +54,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               `
               w-full px-4 py-2
-              rounded-md border
-              bg-white text-secondary-900
-              placeholder:text-secondary-400
+              rounded-md border border-input
+              bg-background text-foreground
+              placeholder:text-muted-foreground
               transition-colors duration-150
 
               focus:outline-none focus:ring-2 focus:ring-offset-0
+              focus:border-primary focus:ring-primary/20
 
-              disabled:bg-secondary-100 disabled:cursor-not-allowed
+              disabled:bg-muted disabled:cursor-not-allowed
               `,
               error
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
                 : isValid
-                  ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20'
-                  : 'border-secondary-300 focus:border-primary-500 focus:ring-primary-500/20',
+                  ? 'border-[--success] focus:border-[--success] focus:ring-[--success]/20'
+                  : 'focus:border-primary focus:ring-primary/20',
               leftElement && 'pl-10',
               rightElement && 'pr-10',
               className
@@ -76,21 +77,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
 
           {rightElement && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
               {rightElement}
             </div>
           )}
 
           {/* Status indicators */}
           {error && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-destructive">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           )}
           {isValid && !error && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[--success]">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -99,13 +100,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {error && (
-          <p id={`${inputId}-error`} className="text-sm text-red-500" role="alert">
+          <p id={`${inputId}-error`} className="text-sm text-destructive" role="alert">
             {error}
           </p>
         )}
 
         {hint && !error && (
-          <p id={`${inputId}-hint`} className="text-sm text-secondary-500">
+          <p id={`${inputId}-hint`} className="text-sm text-muted-foreground">
             {hint}
           </p>
         )}

@@ -53,11 +53,12 @@ export function helmetMiddleware() {
 
         // ========== CROSS-ORIGIN POLICIES ==========
         /**
-         * Cross-Origin-Resource-Policy: same-site
-         * Allow cross-origin fonts/images yang umum dipakai frontend
+         * Cross-Origin-Resource-Policy
+         * - production: cross-origin (frontend & backend di domain berbeda)
+         * - development: same-site
          */
         crossOriginResourcePolicy: {
-            policy: "same-site"
+            policy: process.env.NODE_ENV === "production" ? "cross-origin" : "same-site"
         },
 
         /**

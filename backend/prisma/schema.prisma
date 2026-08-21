@@ -257,6 +257,8 @@ model Payment {
   createdAt         DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
+  webhookEvents     WebhookEvent[]
+
   @@index([status])
   @@index([orderId])
 }
@@ -293,10 +295,41 @@ model IdempotencyRecord {
   responseData      String
   responseStatus    Int
   status            IdempotencyStatus @default(PENDING)
+  expiresAt         DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   @@index([idempotencyKey])
+}
+
+// ============================================================
+// WebhookEvent MODEL (Phase 5 Step 6 - Event Deduplication)
+// ============================================================
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+model WebhookEvent {
+  id                   Int                @id @default(autoincrement())
+  gatewayTransactionId String             @unique
+  gatewayProvider      PaymentProvider
+  eventType            String
+  paymentId            Int?
+  payment              Payment?           @relation(fields: [paymentId], references: [id])
+  rawPayload           Json
+  status               WebhookEventStatus @default(RECEIVED)
+  processedAt          DateTime?
+  errorMessage         String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([gatewayTransactionId])
+  @@index([paymentId])
+  @@index([status])
 }
 
 // ============================================================

@@ -79,7 +79,7 @@ export function Pagination({
       {range.map((item, index) => {
         if (item.type === 'ellipsis') {
           return (
-            <span key={`ellipsis-${index}`} className="px-2 text-secondary-400">
+            <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
               ...
             </span>
           );
@@ -88,7 +88,7 @@ export function Pagination({
         return (
           <Button
             key={item.value}
-            variant={currentPage === item.value ? 'primary' : 'outline'}
+            variant={currentPage === item.value ? 'default' : 'outline'}
             size="sm"
             onClick={() => onPageChange(item.value!)}
             aria-label={`Page ${item.value}`}

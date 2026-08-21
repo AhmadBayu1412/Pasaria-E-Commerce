@@ -121,7 +121,7 @@ export async function addAddress(req: Request, res: Response, next: NextFunction
 export async function updateAddress(req: Request, res: Response, next: NextFunction) {
   try {
     const user = req.user as AuthenticatedUser;
-    const addressId = parseInt(req.params.id);
+    const addressId = parseInt(String(req.params.id));
     const input: Partial<AddressInput> = req.body;
 
     // Check ownership
@@ -178,7 +178,7 @@ export async function updateAddress(req: Request, res: Response, next: NextFunct
 export async function deleteAddress(req: Request, res: Response, next: NextFunction) {
   try {
     const user = req.user as AuthenticatedUser;
-    const addressId = parseInt(req.params.id);
+    const addressId = parseInt(String(req.params.id));
 
     // Check ownership
     const existing = await prisma.address.findFirst({
@@ -231,7 +231,7 @@ export async function deleteAddress(req: Request, res: Response, next: NextFunct
 export async function setDefaultAddress(req: Request, res: Response, next: NextFunction) {
   try {
     const user = req.user as AuthenticatedUser;
-    const addressId = parseInt(req.params.id);
+    const addressId = parseInt(String(req.params.id));
 
     // Check ownership
     const existing = await prisma.address.findFirst({

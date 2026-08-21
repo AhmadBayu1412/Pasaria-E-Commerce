@@ -26,9 +26,7 @@ import type {
   ImageDeleteResponseDTO,
   ImageReorderResponseDTO
 } from "../types/image.dto.js"
-import { writeFile, unlink, mkdir } from "fs/promises"
-import { join, dirname, extname } from "path"
-import { randomBytes } from "crypto"
+import { uploadFileToStorage, deleteFileFromStorage, extractStoragePath } from "../../../infra/storage/supabase.js"
 
 // ============================================================
 // NORMALIZER
@@ -51,40 +49,26 @@ function normalizeImage(image: any): ProductImageResponseDTO {
 }
 
 // ============================================================
-// FILE STORAGE (Local Only - Step 5)
+// FILE STORAGE (Supabase Storage)
 // ============================================================
 
 /**
- * Save file to local disk
- * Returns: path relative to uploads directory
+ * Upload file ke Supabase Storage
+ * Returns: public URL
  */
-async function saveFileToDisk(
+async function saveFile(
   file: MulterFile,
   productId: number
 ): Promise<string> {
-  const uploadDir = join(process.cwd(), "uploads", "products", String(productId))
-  await mkdir(uploadDir, { recursive: true })
-
-  const ext = extname(file.originalname)
-  const filename = `${Date.now()}-${randomBytes(4).toString("hex")}${ext}`
-  const filepath = join(uploadDir, filename)
-
-  await writeFile(filepath, file.buffer)
-
-  return `uploads/products/${productId}/${filename}`
+  return uploadFileToStorage(file.buffer, file.originalname, file.mimetype, productId)
 }
 
 /**
- * Delete file from local disk
+ * Delete file dari Supabase Storage
  */
-async function deleteFileFromDisk(relativePath: string): Promise<void> {
-  const filepath = join(process.cwd(), relativePath)
-  try {
-    await unlink(filepath)
-  } catch {
-    // File tidak ada, skip silently
-    console.log(`[FILE DELETE SKIPPED] ${relativePath} not found`)
-  }
+async function deleteFile(storagePath: string): Promise<void> {
+  const path = extractStoragePath(storagePath)
+  return deleteFileFromStorage(path)
 }
 
 /**
@@ -189,8 +173,8 @@ export async function uploadImage(
         })
       }
 
-      // 6. Save file to disk
-      const relativePath = await saveFileToDisk(file, productId)
+      // 6. Save file ke Supabase Storage
+      const publicUrl = await saveFile(file, productId)
 
       // 7. Get next position
       const position = await getNextPosition(productId)
@@ -199,7 +183,7 @@ export async function uploadImage(
       const newImage = await tx.productImage.create({
         data: {
           productId,
-          path: relativePath,
+          path: publicUrl,
           filename: file.originalname,
           mimeType: file.mimetype,
           size: file.size,
@@ -279,8 +263,8 @@ export async function deleteImage(
     [CacheKey.productsList, CacheKey.productDetail(productId)]
   )
 
-  // 5. Delete file from disk (after transaction)
-  await deleteFileFromDisk(image.path)
+  // 5. Delete file dari Supabase Storage (after transaction)
+  await deleteFile(image.path)
 
   return {
     success: true,
