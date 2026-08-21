@@ -43,10 +43,9 @@ export function errorMiddleware(
         .json({
             success: false,
             error: {
-                code: "INTERNAL_SERVER_ERROR",
-                message: process.env.NODE_ENV === "production"
-                    ? "Terjadi kesalahan internal pada server"
-                    : err.message || "Internal Error"
+                code: err.code || "INTERNAL_SERVER_ERROR",
+                message: err.message || "Terjadi kesalahan internal pada server",
+                details: process.env.NODE_ENV !== "production" ? err.stack : undefined
             }
         })
 }
