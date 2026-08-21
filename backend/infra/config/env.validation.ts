@@ -14,7 +14,7 @@ const REQUIRED_ENV_VARS = [
 
 const REQUIRED_IN_PRODUCTION = [
     "SUPABASE_URL",
-    "SUPABASE_SERVICE_KEY",
+    "SUPABASE_SECRET_KEY",
 ] as const
 
 interface ValidationResult {

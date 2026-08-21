@@ -8,11 +8,11 @@ import { extname } from 'path'
 import { randomBytes } from 'crypto'
 
 const supabaseUrl = process.env.SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY
+const supabaseKey = process.env.SUPABASE_SECRET_KEY
 const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'product-images'
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('[STORAGE] SUPABASE_URL or SUPABASE_SERVICE_KEY not set — file uploads will fail')
+  console.warn('[STORAGE] SUPABASE_URL or SUPABASE_SECRET_KEY not set — file uploads will fail')
 }
 
 export const supabase = supabaseUrl && supabaseKey
@@ -30,7 +30,7 @@ export async function uploadFileToStorage(
   productId: number
 ): Promise<string> {
   if (!supabase) {
-    throw new Error('[STORAGE] Supabase client not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_KEY.')
+    throw new Error('[STORAGE] Supabase client not initialized. Check SUPABASE_URL and SUPABASE_SECRET_KEY.')
   }
 
   const ext = extname(originalname)
