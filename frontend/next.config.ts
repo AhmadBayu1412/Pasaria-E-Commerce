@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Output standalone untuk optimized production build di Render
-  output: 'standalone',
 
   images: {
     remotePatterns: [
