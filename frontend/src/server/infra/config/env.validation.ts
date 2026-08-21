@@ -8,7 +8,6 @@
 const REQUIRED_ENV_VARS = [
     "SESSION_SECRET",
     "SESSION_COOKIE_NAME",
-    "REDIS_URL",
     "DATABASE_URL"
 ] as const
 
