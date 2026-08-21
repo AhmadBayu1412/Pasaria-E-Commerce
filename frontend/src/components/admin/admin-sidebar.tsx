@@ -9,7 +9,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   const isActive = (item: AdminNavItem) => {
-    if (!item.href) return false;
+    if (!item.href || !pathname) return false;
     if (item.href === '/admin') return pathname === '/admin';
     return pathname.startsWith(item.href);
   };

@@ -21,7 +21,8 @@ import { cn } from '@/lib/cn';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const slug = params?.slug as string;
+  const rawSlug = params?.slug;
+  const slug = (Array.isArray(rawSlug) ? rawSlug[0] : rawSlug) || '';
   const router = useRouter();
 
   const [product, setProduct] = useState<ApiProduct | null>(null);

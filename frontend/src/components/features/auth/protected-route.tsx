@@ -28,7 +28,7 @@ export function ProtectedRoute({ children, fallback }: ProtectedRouteProps) {
     // Only redirect when we're sure user is not authenticated
     // Don't redirect during UNKNOWN state
     if (status === 'GUEST') {
-      const returnUrl = encodeURIComponent(pathname);
+      const returnUrl = encodeURIComponent(pathname || '/');
       router.push(`/login?returnUrl=${returnUrl}`);
     }
   }, [status, router, pathname]);

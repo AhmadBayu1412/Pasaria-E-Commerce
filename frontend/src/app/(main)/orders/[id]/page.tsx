@@ -16,7 +16,8 @@ import { useUIStore } from '@/store/ui-store';
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const orderId = Number(params.id);
+  const rawId = params?.id;
+  const orderId = Number(Array.isArray(rawId) ? rawId[0] : (rawId ?? '0'));
   const addToast = useUIStore((state) => state.addToast);
 
   const [order, setOrder] = useState<Order | null>(null);
