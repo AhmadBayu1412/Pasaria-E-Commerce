@@ -32,11 +32,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-
-  // Tambahkan NEXT_PUBLIC_API_URL ke turbopack root supresion
-  turbopack: {
-    root: process.cwd(),
-  },
 };
 
 export default nextConfig;

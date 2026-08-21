@@ -40,7 +40,7 @@ export function ProductTabs({
   
   // Get initial tab from URL hash or default to 'description'
   const getInitialTab = (): TabType => {
-    const hash = searchParams.get('tab') as TabType;
+    const hash = searchParams?.get('tab') as TabType;
     if (hash && tabs.some((t) => t.id === hash)) {
       return hash;
     }
@@ -52,7 +52,7 @@ export function ProductTabs({
   // Sync tab with URL
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
     params.set('tab', tabId);
     router.push(`?${params.toString()}`, { scroll: false });
   };

@@ -31,7 +31,7 @@ const TABS: { id: OrderTab; label: string; icon: React.ReactNode }[] = [
 function OrdersPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab') as OrderTab | null;
+  const tabParam = (searchParams?.get('tab') as OrderTab) || null;
 
   const { orders, page, totalPages, isLoading, error } = useOrderStore();
   const [activeTab, setActiveTab] = useState<OrderTab>(tabParam || 'all');

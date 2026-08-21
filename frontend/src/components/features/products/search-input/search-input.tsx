@@ -13,14 +13,14 @@ import { SEARCH_DEBOUNCE_MS } from '@/lib/constants';
 export function SearchInput() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [value, setValue] = useState(searchParams.get('q') || '');
-  const searchQuery = searchParams.get('q') || '';
+  const searchQuery = searchParams?.get('q') || '';
+  const [value, setValue] = useState(searchQuery);
 
   // Debounced search
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (value !== searchQuery) {
-        const params = new URLSearchParams(searchParams.toString());
+        const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
         if (value) {
           params.set('q', value);
         } else {

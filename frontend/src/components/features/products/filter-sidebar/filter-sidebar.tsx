@@ -27,7 +27,7 @@ export function FilterSidebar({
   const searchParams = useSearchParams();
 
   const updateFilters = (updates: Record<string, string | undefined>) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '');
 
     // Update params
     Object.entries(updates).forEach(([key, value]) => {

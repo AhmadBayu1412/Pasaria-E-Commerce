@@ -10,7 +10,7 @@ import { useSearchParams } from 'next/navigation';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const orderId = searchParams.get('order_id');
+  const orderId = searchParams?.get('order_id');
 
   return (
     <div className="container mx-auto px-4 py-16 text-center">
